@@ -1,5 +1,4 @@
 .venv/
-*.db
 *.log
 *.csv
 __pycache__/

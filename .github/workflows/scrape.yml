@@ -1,0 +1,36 @@
+name: Nettiauto Scraper
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC = 08:00-09:00 Finnish time
+  workflow_dispatch:      # allow manual trigger from the GitHub UI
+
+permissions:
+  contents: write         # needed to push the database back
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install -r requirements.txt
+
+      - name: Run scraper
+        run: uv run python scraper.py
+
+      - name: Commit updated database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add nettiauto_listings.db
+          git diff --staged --quiet || git commit -m "chore: update listings database [skip ci]"
+          git push
