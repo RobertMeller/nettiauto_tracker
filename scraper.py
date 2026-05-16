@@ -9,6 +9,7 @@ import sqlite3
 import time
 import re
 import json
+import math
 import tomllib
 import logging
 from datetime import date, datetime
@@ -153,6 +154,13 @@ def init_db(db_path: str) -> sqlite3.Connection:
             date_first_seen TEXT,
             date_last_seen  TEXT,
             PRIMARY KEY (listing_id, search_label)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS city_coords (
+            city_name   TEXT PRIMARY KEY,
+            lat         REAL,
+            lon         REAL
         )
     """)
     conn.commit()
@@ -466,6 +474,79 @@ def scrape_search(make: str, model: str, params: dict) -> list[Listing]:
 
 
 # ─────────────────────────────────────────────
+# GEOCODING
+# ─────────────────────────────────────────────
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_HEADERS = {"User-Agent": "nettiauto_tracker/1.0 (personal project)"}
+NOMINATIM_DELAY = 1.1  # seconds — Nominatim policy: max 1 request/sec
+
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in km between two lat/lon points."""
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def geocode_city(city_name: str) -> Optional[tuple[float, float]]:
+    """Return (lat, lon) for a Finnish city via Nominatim, or None if not found."""
+    try:
+        resp = requests.get(
+            NOMINATIM_URL,
+            params={"q": f"{city_name}, Finland", "format": "json", "limit": 1},
+            headers=NOMINATIM_HEADERS,
+            timeout=10,
+        )
+        data = resp.json()
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception as e:
+        log.warning(f"  Geocoding failed for '{city_name}': {e}")
+    return None
+
+
+def geocode_cities(conn: sqlite3.Connection):
+    """Geocode all unique cities in listings not yet in the city_coords cache."""
+    all_cities = {
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT location FROM listings WHERE location IS NOT NULL AND location != ''"
+        ).fetchall()
+    }
+    cached = {
+        row[0] for row in conn.execute("SELECT city_name FROM city_coords").fetchall()
+    }
+    to_geocode = sorted(all_cities - cached)
+
+    if not to_geocode:
+        log.info("  City geocode cache is up to date.")
+        return
+
+    log.info(f"  Geocoding {len(to_geocode)} new cities (this may take a few minutes)…")
+    for city in to_geocode:
+        coords = geocode_city(city)
+        if coords:
+            lat, lon = coords
+            conn.execute(
+                "INSERT OR REPLACE INTO city_coords (city_name, lat, lon) VALUES (?,?,?)",
+                (city, lat, lon),
+            )
+            log.info(f"    {city}: {lat:.4f}, {lon:.4f}")
+        else:
+            conn.execute(
+                "INSERT OR REPLACE INTO city_coords (city_name, lat, lon) VALUES (?,NULL,NULL)",
+                (city,),
+            )
+            log.warning(f"    {city}: not found")
+        conn.commit()
+        time.sleep(NOMINATIM_DELAY)
+
+
+# ─────────────────────────────────────────────
 # FILTERING
 # ─────────────────────────────────────────────
 
@@ -521,9 +602,34 @@ def apply_filters(conn: sqlite3.Connection):
             values.append(params["MoottoritilavuusMax"])
 
         where = " AND ".join(conditions)
-        matches = conn.execute(
+        matches = list(conn.execute(
             f"SELECT * FROM listings WHERE {where}", values
-        ).fetchall()
+        ).fetchall())
+
+        # Distance filter
+        origin_city = s.get("origin_city")
+        max_dist_km = s.get("max_distance_km")
+        if origin_city and max_dist_km:
+            origin_row = conn.execute(
+                "SELECT lat, lon FROM city_coords WHERE city_name = ?", (origin_city,)
+            ).fetchone()
+            if not origin_row or origin_row["lat"] is None:
+                log.warning(f"  '{origin_city}' not in geocode cache — run --filter-only to geocode first. Skipping distance filter.")
+            else:
+                olat, olon = origin_row["lat"], origin_row["lon"]
+                # Load coords for all cities at once
+                city_cache = {
+                    row["city_name"]: (row["lat"], row["lon"])
+                    for row in conn.execute("SELECT city_name, lat, lon FROM city_coords").fetchall()
+                    if row["lat"] is not None
+                }
+                before = len(matches)
+                matches = [
+                    row for row in matches
+                    if row["location"] in city_cache
+                    and haversine(olat, olon, *city_cache[row["location"]]) <= max_dist_km
+                ]
+                log.info(f"  Distance filter ({origin_city} ≤{max_dist_km}km): {before} → {len(matches)} listings")
 
         conn.executemany("""
             INSERT INTO filtered_listings
@@ -596,6 +702,8 @@ def run(dry_run: bool = False):
         """, (run_date, total_found, total_new, total_updated))
         conn.commit()
         log.info(f"\n{'='*60}")
+        log.info(f"Geocoding new cities…")
+        geocode_cities(conn)
         log.info(f"Applying filters from searches.toml…")
         apply_filters(conn)
 
@@ -615,6 +723,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.filter_only:
         conn = init_db(DB_PATH)
+        log.info("Geocoding new cities…")
+        geocode_cities(conn)
         log.info("Applying filters from searches.toml…")
         apply_filters(conn)
         conn.close()
