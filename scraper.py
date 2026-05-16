@@ -139,8 +139,20 @@ def init_db(db_path: str) -> sqlite3.Connection:
             listing_id      INTEGER,
             search_label    TEXT,
             matched_date    TEXT,
-            PRIMARY KEY (listing_id, search_label),
-            FOREIGN KEY (listing_id) REFERENCES listings(listing_id)
+            make            TEXT,
+            model           TEXT,
+            year            INTEGER,
+            mileage         INTEGER,
+            price           INTEGER,
+            engine_cc       INTEGER,
+            fuel_type       TEXT,
+            transmission    TEXT,
+            body_type       TEXT,
+            location        TEXT,
+            url             TEXT,
+            date_first_seen TEXT,
+            date_last_seen  TEXT,
+            PRIMARY KEY (listing_id, search_label)
         )
     """)
     conn.commit()
@@ -463,6 +475,30 @@ def apply_filters(conn: sqlite3.Connection):
     configs = load_search_configs()
     total_matched = 0
 
+    # filtered_listings is always derived data — drop and recreate for a clean rebuild
+    conn.execute("DROP TABLE IF EXISTS filtered_listings")
+    conn.execute("""
+        CREATE TABLE filtered_listings (
+            listing_id      INTEGER,
+            search_label    TEXT,
+            matched_date    TEXT,
+            make            TEXT,
+            model           TEXT,
+            year            INTEGER,
+            mileage         INTEGER,
+            price           INTEGER,
+            engine_cc       INTEGER,
+            fuel_type       TEXT,
+            transmission    TEXT,
+            body_type       TEXT,
+            location        TEXT,
+            url             TEXT,
+            date_first_seen TEXT,
+            date_last_seen  TEXT,
+            PRIMARY KEY (listing_id, search_label)
+        )
+    """)
+
     for config in configs:
         s = config["_raw"]
         label = s.get("label") or f"{s['make'].title()} {s['model'].title()}"
@@ -486,14 +522,23 @@ def apply_filters(conn: sqlite3.Connection):
 
         where = " AND ".join(conditions)
         matches = conn.execute(
-            f"SELECT listing_id FROM listings WHERE {where}", values
+            f"SELECT * FROM listings WHERE {where}", values
         ).fetchall()
 
-        conn.execute("DELETE FROM filtered_listings WHERE search_label = ?", (label,))
-        conn.executemany(
-            "INSERT OR REPLACE INTO filtered_listings (listing_id, search_label, matched_date) VALUES (?,?,?)",
-            [(row["listing_id"], label, today) for row in matches],
-        )
+        conn.executemany("""
+            INSERT INTO filtered_listings
+              (listing_id, search_label, matched_date,
+               make, model, year, mileage, price, engine_cc,
+               fuel_type, transmission, body_type, location, url,
+               date_first_seen, date_last_seen)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, [
+            (row["listing_id"], label, today,
+             row["make"], row["model"], row["year"], row["mileage"], row["price"],
+             row["engine_cc"], row["fuel_type"], row["transmission"], row["body_type"],
+             row["location"], row["url"], row["date_first_seen"], row["date_last_seen"])
+            for row in matches
+        ])
         conn.commit()
         log.info(f"  Filter '{label}': {len(matches)} matches")
         total_matched += len(matches)

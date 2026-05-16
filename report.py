@@ -32,22 +32,25 @@ def connect():
 
 def print_listings(rows, title=""):
     if title:
-        print(f"\n{'='*90}")
+        print(f"\n{'='*120}")
         print(f"  {title}")
-        print(f"{'='*90}")
+        print(f"{'='*120}")
 
-    fmt = "{:<10} {:<6} {:<12} {:>6} {:>10} {:>8}  {:<20} {:<12} {:<12}"
+    fmt = "{:<10} {:<6} {:<12} {:>6} {:>10} {:>8}  {:<16} {:<14} {:<14}  {:<12} {:<12}"
     header = fmt.format(
         "ID", "Year", "Model", "Price€", "Mileage km",
-        "Engine", "Location", "First seen", "Last seen"
+        "Engine", "Location", "Fuel", "Transmission",
+        "First seen", "Last seen"
     )
     print(header)
-    print("-" * 90)
+    print("-" * 120)
 
     for r in rows:
         engine = f"{r['engine_cc']}cc" if r["engine_cc"] else "–"
-        location = (r["location"] or "–")[:20]
+        location = (r["location"] or "–")[:16]
         model_str = f"{(r['make'] or '').title()} {(r['model'] or '').title()}"[:12]
+        fuel = (r["fuel_type"] or "–")[:14]
+        transmission = (r["transmission"] or "–")[:14]
         print(fmt.format(
             r["listing_id"],
             r["year"] or "–",
@@ -56,6 +59,8 @@ def print_listings(rows, title=""):
             f"{r['mileage']:,}" if r["mileage"] else "–",
             engine,
             location,
+            fuel,
+            transmission,
             r["date_first_seen"],
             r["date_last_seen"],
         ))
@@ -121,9 +126,7 @@ def main():
 
     if args.filtered:
         rows = conn.execute(
-            "SELECT l.* FROM listings l "
-            "JOIN filtered_listings f ON l.listing_id = f.listing_id "
-            "ORDER BY l." + args.sort
+            "SELECT * FROM filtered_listings ORDER BY " + args.sort
         ).fetchall()
         title = f"Filtered listings  ({len(rows)} records)"
     elif args.new:
