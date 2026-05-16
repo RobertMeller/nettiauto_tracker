@@ -46,7 +46,7 @@ def load_search_configs() -> list[dict]:
             params["Ilmastointi"] = 1
         if "max_engine_cc" in s:
             params["MoottoritilavuusMax"] = s["max_engine_cc"]
-        configs.append({"make": s["make"], "model": s["model"], "params": params})
+        configs.append({"make": s["make"], "model": s["model"], "params": params, "_raw": s})
     return configs
 
 # Polite delay between requests (seconds)
@@ -132,6 +132,15 @@ def init_db(db_path: str) -> sqlite3.Connection:
             listings_found  INTEGER,
             listings_new    INTEGER,
             listings_updated INTEGER
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS filtered_listings (
+            listing_id      INTEGER,
+            search_label    TEXT,
+            matched_date    TEXT,
+            PRIMARY KEY (listing_id, search_label),
+            FOREIGN KEY (listing_id) REFERENCES listings(listing_id)
         )
     """)
     conn.commit()
@@ -445,6 +454,54 @@ def scrape_search(make: str, model: str, params: dict) -> list[Listing]:
 
 
 # ─────────────────────────────────────────────
+# FILTERING
+# ─────────────────────────────────────────────
+
+def apply_filters(conn: sqlite3.Connection):
+    """Rebuild filtered_listings from listings using criteria in searches.toml."""
+    today = date.today().isoformat()
+    configs = load_search_configs()
+    total_matched = 0
+
+    for config in configs:
+        s = config["_raw"]
+        label = s.get("label") or f"{s['make'].title()} {s['model'].title()}"
+        params = config["params"]
+
+        conditions = ["make = ?", "model = ?"]
+        values: list = [s["make"], s["model"]]
+
+        if "HintaMin" in params:
+            conditions.append("price >= ?")
+            values.append(params["HintaMin"])
+        if "HintaMax" in params:
+            conditions.append("price <= ?")
+            values.append(params["HintaMax"])
+        if "MittarilukemaMax" in params:
+            conditions.append("(mileage IS NULL OR mileage <= ?)")
+            values.append(params["MittarilukemaMax"])
+        if "MoottoritilavuusMax" in params:
+            conditions.append("(engine_cc IS NULL OR engine_cc <= ?)")
+            values.append(params["MoottoritilavuusMax"])
+
+        where = " AND ".join(conditions)
+        matches = conn.execute(
+            f"SELECT listing_id FROM listings WHERE {where}", values
+        ).fetchall()
+
+        conn.execute("DELETE FROM filtered_listings WHERE search_label = ?", (label,))
+        conn.executemany(
+            "INSERT OR REPLACE INTO filtered_listings (listing_id, search_label, matched_date) VALUES (?,?,?)",
+            [(row["listing_id"], label, today) for row in matches],
+        )
+        conn.commit()
+        log.info(f"  Filter '{label}': {len(matches)} matches")
+        total_matched += len(matches)
+
+    log.info(f"  Total filtered matches: {total_matched}")
+
+
+# ─────────────────────────────────────────────
 # MAIN RUN
 # ─────────────────────────────────────────────
 
@@ -493,6 +550,9 @@ def run(dry_run: bool = False):
             VALUES (?,?,?,?)
         """, (run_date, total_found, total_new, total_updated))
         conn.commit()
+        log.info(f"\n{'='*60}")
+        log.info(f"Applying filters from searches.toml…")
+        apply_filters(conn)
 
     log.info(f"\n{'='*60}")
     log.info(f"Run complete: {total_found} found, {total_new} new, {total_updated} updated")
@@ -505,5 +565,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Nettiauto scraper")
     parser.add_argument("--dry-run", action="store_true",
                         help="Fetch and parse listings without writing to the database")
+    parser.add_argument("--filter-only", action="store_true",
+                        help="Re-apply searches.toml filters to existing data without scraping")
     args = parser.parse_args()
-    run(dry_run=args.dry_run)
+    if args.filter_only:
+        conn = init_db(DB_PATH)
+        log.info("Applying filters from searches.toml…")
+        apply_filters(conn)
+        conn.close()
+    else:
+        run(dry_run=args.dry_run)

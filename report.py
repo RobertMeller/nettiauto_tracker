@@ -106,6 +106,8 @@ def main():
     parser.add_argument("--sort", default="price",
                         choices=["price", "year", "mileage", "date_first_seen"],
                         help="Sort column")
+    parser.add_argument("--filtered", action="store_true",
+                        help="Show only listings that matched your searches.toml criteria")
     args = parser.parse_args()
 
     conn = connect()
@@ -116,18 +118,26 @@ def main():
         return
 
     today = date.today().isoformat()
-    if args.new:
+
+    if args.filtered:
+        rows = conn.execute(
+            "SELECT l.* FROM listings l "
+            "JOIN filtered_listings f ON l.listing_id = f.listing_id "
+            "ORDER BY l." + args.sort
+        ).fetchall()
+        title = f"Filtered listings  ({len(rows)} records)"
+    elif args.new:
         rows = conn.execute(
             "SELECT * FROM listings WHERE date_first_seen = ? ORDER BY " + args.sort,
             (today,),
         ).fetchall()
+        title = f"New listings today  ({len(rows)} records)"
     else:
         rows = conn.execute(
             "SELECT * FROM listings ORDER BY " + args.sort
         ).fetchall()
+        title = f"All tracked listings  ({len(rows)} records)"
 
-    title = f"{'New listings today' if args.new else 'All tracked listings'}  "
-    title += f"({len(rows)} records)"
     print_listings(rows, title)
 
     # Run stats
