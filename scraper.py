@@ -3,11 +3,12 @@ Nettiauto.com Car Listing Scraper & Price History Tracker
 Tracks Toyota Corolla & Avensis listings matching specific search criteria.
 """
 
-import requests
+from curl_cffi import requests  # impersonates Chrome TLS to bypass Cloudflare
 from bs4 import BeautifulSoup
 import sqlite3
 import time
 import re
+import json
 import logging
 from datetime import date, datetime
 from dataclasses import dataclass, field
@@ -60,8 +61,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("scraper.log"),
+        logging.StreamHandler(open(__import__("sys").stdout.fileno(), mode="w", encoding="utf-8", closefd=False)),
+        logging.FileHandler("scraper.log", encoding="utf-8"),
     ],
 )
 log = logging.getLogger(__name__)
@@ -218,13 +219,24 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
+MIN_LISTING_LINKS = 3  # fewer than this on a page = likely blocked
+
 def get_page(url: str, params: dict = None, retries: int = 3) -> Optional[BeautifulSoup]:
     for attempt in range(1, retries + 1):
         try:
-            resp = requests.get(url, headers=HEADERS, params=params, timeout=20)
+            resp = requests.get(
+                url, headers=HEADERS, params=params, timeout=20,
+                impersonate="chrome124",
+            )
             resp.raise_for_status()
-            return BeautifulSoup(resp.text, "html.parser")
-        except requests.RequestException as e:
+            soup = BeautifulSoup(resp.text, "lxml")
+            # Guard against Cloudflare / CAPTCHA pages with no real content
+            listing_links = soup.find_all("a", href=re.compile(r"/\d{6,10}"))
+            if len(listing_links) < MIN_LISTING_LINKS and "Just a moment" in resp.text:
+                log.warning(f"  Cloudflare challenge detected on {url}. Stopping.")
+                return None
+            return soup
+        except Exception as e:
             wait = 5 * attempt
             log.warning(f"  Request failed (attempt {attempt}/{retries}): {e}. Retrying in {wait}s…")
             time.sleep(wait)
@@ -257,60 +269,64 @@ def extract_listing_id(url: str) -> Optional[int]:
 def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
     """Parse one listing card from the search results page."""
     try:
-        # --- URL & ID ---
-        link_tag = card.find("a", href=re.compile(r"/\d{6,10}"))
+        # Primary data source: structured JSON in data-datalayer attribute
+        dl_raw = card.get("data-datalayer")
+        if not dl_raw:
+            return None
+        data = json.loads(dl_raw)
+
+        listing_id = data.get("item_id")
+        if not listing_id:
+            return None
+
+        price   = data.get("item_vehicle_price")
+        year    = data.get("item_year_model")
+        mileage = data.get("item_mileage")
+        fuel_type = data.get("item_power_type")  # e.g. "Bensiini", "Diesel", "Hybridi (bensiini/sähkö)"
+
+        # --- URL ---
+        link_tag = card.find("a", href=re.compile(rf"/{make}/{model}/\d{{6,10}}", re.I))
+        if not link_tag:
+            link_tag = card.find("a", href=re.compile(r"/\d{6,10}"))
         if not link_tag:
             return None
         href = link_tag.get("href", "")
         if not href.startswith("http"):
             href = BASE_URL + href
-        listing_id = extract_listing_id(href)
-        if not listing_id:
-            return None
 
-        # --- Price ---
-        price = None
-        price_tag = (
-            card.find("span", class_=re.compile(r"price", re.I))
-            or card.find("div", class_=re.compile(r"price", re.I))
-        )
-        if price_tag:
-            price = parse_int(price_tag.get_text())
+        # --- Location ---
+        # The city text is the first non-empty string inside the location div
+        location = None
+        loc_tag = card.find(class_=re.compile(r"product-card__location-info", re.I))
+        if loc_tag:
+            raw = next((s for s in loc_tag.strings if s.strip()), "")
+            location = raw.strip().split(",")[0].strip()
 
-        # --- Year, mileage, engine from the "spec" line ---
-        year = mileage = engine_cc = None
+        # --- Engine CC from card text (not in datalayer) ---
+        engine_cc = None
         text_content = card.get_text(" ", strip=True)
-
-        # Year: 4-digit number between 1990-2030
-        year_m = re.search(r"\b(19[9]\d|20[0-3]\d)\b", text_content)
-        if year_m:
-            year = int(year_m.group(1))
-
-        # Mileage: number followed by km
-        km_m = re.search(r"(\d[\d\s]*)\s*km", text_content, re.I)
-        if km_m:
-            mileage = parse_int(km_m.group(1))
-
-        # Engine: number followed by cc or cm or just a decimal like 1.6
         cc_m = re.search(r"(\d[\d\s]*)\s*(?:cm³|cc)", text_content, re.I)
         if cc_m:
             engine_cc = parse_int(cc_m.group(1))
         else:
-            # Try decimal engine size like "1.6" or "1,6"
             eng_m = re.search(r"\b(\d)[.,](\d)\b", text_content)
             if eng_m:
                 engine_cc = int(eng_m.group(1)) * 1000 + int(eng_m.group(2)) * 100
 
-        # --- Location ---
-        location = None
-        loc_tag = card.find(class_=re.compile(r"location|city|seller", re.I))
-        if loc_tag:
-            location = loc_tag.get_text(strip=True)
-        else:
-            # Fallback: look for Finnish city pattern
-            loc_m = re.search(r"([A-ZÄÖÅ][a-zäöå]+(?:\s[A-ZÄÖÅ][a-zäöå]+)*),\s*([A-Za-zÄÖÅäöå\s\-]+)", text_content)
-            if loc_m:
-                location = loc_m.group(0)
+        # --- Transmission from card text ---
+        transmission = None
+        for trans in ["Automaatti", "Manuaali", "Automatic", "Manual"]:
+            if trans.lower() in text_content.lower():
+                transmission = trans
+                break
+
+        # --- Body type from card text ---
+        body_type = None
+        for body in ["Farmari", "Sedan", "Hatchback", "Viistoperä", "Coupe",
+                     "Tila-auto", "Wagon", "Station wagon"]:
+            if body.lower() in text_content.lower():
+                body_type = body
+                break
 
         today = date.today().isoformat()
         return Listing(
@@ -325,6 +341,9 @@ def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
             url=href,
             date_first_seen=today,
             date_last_seen=today,
+            fuel_type=fuel_type,
+            transmission=transmission,
+            body_type=body_type,
         )
     except Exception as e:
         log.debug(f"  Card parse error: {e}")
@@ -399,47 +418,25 @@ def scrape_search(make: str, model: str, params: dict) -> list[Listing]:
             break
         polite_sleep()
 
-        # Find listing cards — nettiauto uses various class names; try common ones
-        cards = (
-            soup.find_all("div", class_=re.compile(r"car-ad|listing-item|ad-item|result-item", re.I))
-            or soup.find_all("article")
-            or soup.find_all("li", class_=re.compile(r"car|auto|ad", re.I))
-        )
+        # nettiauto listing cards are div.product-card with a data-datalayer JSON attribute
+        cards = soup.find_all("div", class_="product-card")
 
         if not cards:
-            # Fallback: find all links that look like listing URLs
-            links = soup.find_all("a", href=re.compile(rf"/{make}/{model}/\d{{6,10}}"))
-            seen_ids = set()
-            for link in links:
-                listing_id = extract_listing_id(link["href"])
-                if listing_id and listing_id not in seen_ids:
-                    seen_ids.add(listing_id)
-                    href = link["href"]
-                    if not href.startswith("http"):
-                        href = BASE_URL + href
-                    today = date.today().isoformat()
-                    listings.append(Listing(
-                        listing_id=listing_id, make=make, model=model,
-                        year=None, mileage=None, price=None, engine_cc=None,
-                        location=None, url=href,
-                        date_first_seen=today, date_last_seen=today,
-                    ))
-            if not seen_ids:
-                log.info(f"  No more listings found on page {page}.")
-                break
-        else:
-            new_on_page = 0
-            for card in cards:
-                listing = parse_search_result_card(card, make, model)
-                if listing:
-                    listings.append(listing)
-                    new_on_page += 1
-            log.info(f"  Found {new_on_page} listings on page {page}.")
-            if new_on_page == 0:
-                break
+            log.info(f"  No listing cards found on page {page}. Stopping.")
+            break
 
-        # Check for next page
-        next_btn = soup.find("a", string=re.compile(r"Seuraava|Next|›|»", re.I))
+        new_on_page = 0
+        for card in cards:
+            listing = parse_search_result_card(card, make, model)
+            if listing:
+                listings.append(listing)
+                new_on_page += 1
+        log.info(f"  Found {new_on_page} listings on page {page}.")
+        if new_on_page == 0:
+            break
+
+        # Check for next page — nettiauto uses class "pagination__next"
+        next_btn = soup.find("a", class_=re.compile(r"pagination__next", re.I))
         if not next_btn:
             break
         page += 1
@@ -451,7 +448,9 @@ def scrape_search(make: str, model: str, params: dict) -> list[Listing]:
 # MAIN RUN
 # ─────────────────────────────────────────────
 
-def run():
+def run(dry_run: bool = False):
+    if dry_run:
+        log.info("DRY RUN — listings will be parsed but NOT written to the database.")
     conn = init_db(DB_PATH)
     run_date = datetime.now().isoformat(timespec="seconds")
     total_found = total_new = total_updated = 0
@@ -471,11 +470,16 @@ def run():
         total_found += len(raw_listings)
 
         for i, listing in enumerate(raw_listings, 1):
-            # If we're missing key data, fetch the detail page
             if listing.price is None or listing.year is None:
                 log.debug(f"  [{i}/{len(raw_listings)}] Enriching {listing.listing_id}…")
                 listing = enrich_from_listing_page(listing)
                 polite_sleep()
+
+            if dry_run:
+                log.info(f"  [DRY] [{listing.listing_id}] {listing.year} "
+                         f"{listing.make.title()} {listing.model.title()} — "
+                         f"{listing.price}€  {listing.mileage}km  {listing.location}")
+                continue
 
             stats = upsert_listing(conn, listing)
             if stats["new"]:
@@ -483,12 +487,12 @@ def run():
             elif stats["price_changed"] or stats["mileage_changed"]:
                 total_updated += 1
 
-    # Record run summary
-    conn.execute("""
-        INSERT INTO scrape_runs (run_date, listings_found, listings_new, listings_updated)
-        VALUES (?,?,?,?)
-    """, (run_date, total_found, total_new, total_updated))
-    conn.commit()
+    if not dry_run:
+        conn.execute("""
+            INSERT INTO scrape_runs (run_date, listings_found, listings_new, listings_updated)
+            VALUES (?,?,?,?)
+        """, (run_date, total_found, total_new, total_updated))
+        conn.commit()
 
     log.info(f"\n{'='*60}")
     log.info(f"Run complete: {total_found} found, {total_new} new, {total_updated} updated")
@@ -497,4 +501,9 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    parser = argparse.ArgumentParser(description="Nettiauto scraper")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Fetch and parse listings without writing to the database")
+    args = parser.parse_args()
+    run(dry_run=args.dry_run)

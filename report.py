@@ -11,8 +11,11 @@ Usage:
 import sqlite3
 import csv
 import argparse
+import sys
 from datetime import date
 from pathlib import Path
+
+sys.stdout.reconfigure(encoding="utf-8")
 
 DB_PATH = "nettiauto_listings.db"
 
@@ -113,10 +116,15 @@ def main():
         return
 
     today = date.today().isoformat()
-    where = f"WHERE date_first_seen = '{today}'" if args.new else ""
-    rows = conn.execute(
-        f"SELECT * FROM listings {where} ORDER BY {args.sort}"
-    ).fetchall()
+    if args.new:
+        rows = conn.execute(
+            "SELECT * FROM listings WHERE date_first_seen = ? ORDER BY " + args.sort,
+            (today,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM listings ORDER BY " + args.sort
+        ).fetchall()
 
     title = f"{'New listings today' if args.new else 'All tracked listings'}  "
     title += f"({len(rows)} records)"
