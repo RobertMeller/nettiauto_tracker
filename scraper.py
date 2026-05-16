@@ -9,45 +9,45 @@ import sqlite3
 import time
 import re
 import json
+import tomllib
 import logging
 from datetime import date, datetime
 from dataclasses import dataclass, field
 from typing import Optional
 import random
+from pathlib import Path
 
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
 
-SEARCH_CONFIGS = [
-    {
-        "make": "toyota",
-        "model": "corolla",
-        "params": {
-            "MittarilukemaMax": 200000,
-            "HintaMin": 5000,
-            "HintaMax": 12000,
-            "Vetokoukku": 1,          # 1 = Kyllä (Yes)
-            "Ilmastointi": 1,          # 1 = Kyllä (Yes)
-            "MoottoritilavuusMax": 1800,  # cc  (<1.8 L)
-        }
-    },
-    {
-        "make": "toyota",
-        "model": "avensis",
-        "params": {
-            "MittarilukemaMax": 200000,
-            "HintaMin": 5000,
-            "HintaMax": 12000,
-            "Vetokoukku": 1,
-            "Ilmastointi": 1,
-            "MoottoritilavuusMax": 1800,
-        }
-    },
-]
-
+SEARCHES_FILE = Path(__file__).parent / "searches.toml"
 BASE_URL = "https://www.nettiauto.com"
 DB_PATH = "nettiauto_listings.db"
+
+
+def load_search_configs() -> list[dict]:
+    """Load search criteria from searches.toml and convert to nettiauto API params."""
+    with open(SEARCHES_FILE, "rb") as f:
+        data = tomllib.load(f)
+
+    configs = []
+    for s in data.get("searches", []):
+        params = {}
+        if "min_price" in s:
+            params["HintaMin"] = s["min_price"]
+        if "max_price" in s:
+            params["HintaMax"] = s["max_price"]
+        if "max_mileage" in s:
+            params["MittarilukemaMax"] = s["max_mileage"]
+        if s.get("tow_hitch"):
+            params["Vetokoukku"] = 1
+        if s.get("ac"):
+            params["Ilmastointi"] = 1
+        if "max_engine_cc" in s:
+            params["MoottoritilavuusMax"] = s["max_engine_cc"]
+        configs.append({"make": s["make"], "model": s["model"], "params": params})
+    return configs
 
 # Polite delay between requests (seconds)
 REQUEST_DELAY_MIN = 2.0
@@ -455,7 +455,7 @@ def run(dry_run: bool = False):
     run_date = datetime.now().isoformat(timespec="seconds")
     total_found = total_new = total_updated = 0
 
-    for config in SEARCH_CONFIGS:
+    for config in load_search_configs():
         make = config["make"]
         model = config["model"]
         params = config["params"]

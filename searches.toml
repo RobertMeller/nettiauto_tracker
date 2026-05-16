@@ -1,0 +1,23 @@
+# Nettiauto search criteria
+# Add a new [[searches]] block for each make/model combination you want to track.
+# All fields except make and model are optional — remove a line to disable that filter.
+
+[[searches]]
+make = "toyota"
+model = "corolla"
+min_price = 5000        # EUR
+max_price = 12000       # EUR
+max_mileage = 200000    # km
+tow_hitch = true
+ac = true
+max_engine_cc = 1800    # e.g. 1800 means < 1.8 L
+
+[[searches]]
+make = "toyota"
+model = "avensis"
+min_price = 5000
+max_price = 12000
+max_mileage = 200000
+tow_hitch = true
+ac = true
+max_engine_cc = 1800
