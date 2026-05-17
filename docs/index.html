@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nettiauto Report — 2026-05-17</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; padding: 2rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .meta { color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; color: #334155; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  th { background: #1e293b; color: white; text-align: left; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: #3b82f6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  .chart-box { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .chart-box.wide { grid-column: 1 / -1; }
+  canvas { max-height: 320px; }
+</style>
+</head>
+<body>
+<h1>Nettiauto Tracker</h1>
+<p class="meta">Generated 2026-05-17 &nbsp;·&nbsp; 5 filtered listings</p>
+
+<h2>Matched Listings</h2>
+<table>
+  <thead><tr>
+    <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th>
+    <th>Engine</th><th>Fuel</th><th>Location</th><th>On market</th><th>Link</th>
+  </tr></thead>
+  <tbody>
+        <tr>
+            <td>2006</td>
+            <td>Toyota Avensis</td>
+            <td class="num">6,990 €</td>
+            <td class="num">163,000 km</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Raisio</td>
+            <td class="num">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15674074" target="_blank">View →</a></td>
+        </tr>
+        <tr>
+            <td>2005</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,999 €</td>
+            <td class="num">95,177 km</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Kokemäki</td>
+            <td class="num">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15667876" target="_blank">View →</a></td>
+        </tr>
+        <tr>
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,990 €</td>
+            <td class="num">150,000 km</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Raisio</td>
+            <td class="num">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15748321" target="_blank">View →</a></td>
+        </tr>
+        <tr>
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,680 €</td>
+            <td class="num">192,000 km</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Raisio</td>
+            <td class="num">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15684610" target="_blank">View →</a></td>
+        </tr>
+        <tr>
+            <td>2015</td>
+            <td>Toyota Avensis</td>
+            <td class="num">11,990 €</td>
+            <td class="num">196,720 km</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Raasepori</td>
+            <td class="num">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15612377" target="_blank">View →</a></td>
+        </tr></tbody>
+</table>
+
+<h2>Charts</h2>
+<div class="charts">
+  <div class="chart-box">
+    <canvas id="scatter"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="activity"></canvas>
+  </div>
+  <div class="chart-box wide" style="display:none" id="historyBox">
+    <canvas id="history"></canvas>
+  </div>
+</div>
+
+<script>
+const scatter = new Chart(document.getElementById('scatter'), {
+  type: 'scatter',
+  data: { datasets: [{"label": "Toyota Avensis", "data": [{"x": 163000, "y": 6990, "label": "2006 Toyota Avensis \u2014 Raisio"}, {"x": 196720, "y": 11990, "label": "2015 Toyota Avensis \u2014 Raasepori"}], "backgroundColor": "#3b82f6", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Corolla", "data": [{"x": 95177, "y": 6999, "label": "2005 Toyota Corolla \u2014 Kokem\u00e4ki"}, {"x": 150000, "y": 9990, "label": "2011 Toyota Corolla \u2014 Raisio"}, {"x": 192000, "y": 11680, "label": "2012 Toyota Corolla \u2014 Raisio"}], "backgroundColor": "#f59e0b", "pointRadius": 7, "pointHoverRadius": 9}] },
+  options: {
+    plugins: {
+      title: { display: true, text: 'Price vs Mileage' },
+      tooltip: { callbacks: { label: ctx => ctx.raw.label + ' — ' + ctx.raw.y.toLocaleString() + ' € / ' + ctx.raw.x.toLocaleString() + ' km' } }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Mileage (km)' } },
+      y: { title: { display: true, text: 'Price (€)' } }
+    }
+  }
+});
+
+const activity = new Chart(document.getElementById('activity'), {
+  type: 'bar',
+  data: {
+    labels: ["2026-05-16", "2026-05-16", "2026-05-17"],
+    datasets: [{ label: 'New listings', data: [1592, 23, 6], backgroundColor: '#3b82f6' }]
+  },
+  options: {
+    plugins: { title: { display: true, text: 'New Listings per Scrape Run' } },
+    scales: { y: { beginAtZero: true } }
+  }
+});
+
+
+</script>
+</body>
+</html>

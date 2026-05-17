@@ -598,8 +598,17 @@ def apply_filters(conn: sqlite3.Connection):
             conditions.append("(mileage IS NULL OR mileage <= ?)")
             values.append(params["MittarilukemaMax"])
         if "MoottoritilavuusMax" in params:
-            conditions.append("(engine_cc IS NULL OR engine_cc <= ?)")
+            conditions.append("(engine_cc IS NULL OR engine_cc < ?)")
             values.append(params["MoottoritilavuusMax"])
+        if "min_year" in s:
+            conditions.append("(year IS NULL OR year >= ?)")
+            values.append(s["min_year"])
+
+        exclude_fuels = s.get("exclude_fuel_type", [])
+        if exclude_fuels:
+            placeholders = ",".join("?" * len(exclude_fuels))
+            conditions.append(f"(fuel_type IS NULL OR fuel_type NOT IN ({placeholders}))")
+            values.extend(exclude_fuels)
 
         where = " AND ".join(conditions)
         matches = list(conn.execute(

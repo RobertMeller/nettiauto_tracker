@@ -11,6 +11,8 @@ max_mileage = 200000    # km
 tow_hitch = true
 ac = true
 max_engine_cc = 1800    # e.g. 1800 means < 1.8 L
+exclude_fuel_type = ["Diesel"]
+min_year = 2005
 origin_city = "Turku"
 max_distance_km = 100
 
@@ -23,5 +25,7 @@ max_mileage = 200000
 tow_hitch = true
 ac = true
 max_engine_cc = 1800
+exclude_fuel_type = ["Diesel"]
+min_year = 2005
 origin_city = "Turku"
 max_distance_km = 100
