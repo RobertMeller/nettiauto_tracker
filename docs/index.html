@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nettiauto Report — 2026-05-24</title>
+<title>Nettiauto Report — 2026-05-25</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +27,7 @@
 </head>
 <body>
 <h1>Nettiauto Tracker</h1>
-<p class="meta">Generated 2026-05-24 &nbsp;·&nbsp; 6 filtered listings</p>
+<p class="meta">Generated 2026-05-25 &nbsp;·&nbsp; 6 filtered listings</p>
 
 <h2>Matched Listings</h2>
 <table>
@@ -55,7 +55,7 @@
             <td>1600cc</td>
             <td>Bensiini</td>
             <td>Raisio</td>
-            <td class="num">8d</td>
+            <td class="num">9d</td>
             <td><a href="https://www.nettiauto.com/toyota/avensis/15674074" target="_blank">View →</a></td>
         </tr>
         <tr>
@@ -88,7 +88,7 @@
             <td>1600cc</td>
             <td>Bensiini</td>
             <td>Raisio</td>
-            <td class="num">8d</td>
+            <td class="num">9d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15684610" target="_blank">View →</a></td>
         </tr>
         <tr>
@@ -99,7 +99,7 @@
             <td>1600cc</td>
             <td>Bensiini</td>
             <td>Raasepori</td>
-            <td class="num">8d</td>
+            <td class="num">9d</td>
             <td><a href="https://www.nettiauto.com/toyota/avensis/15612377" target="_blank">View →</a></td>
         </tr></tbody>
 </table>
@@ -136,8 +136,8 @@ const scatter = new Chart(document.getElementById('scatter'), {
 const activity = new Chart(document.getElementById('activity'), {
   type: 'bar',
   data: {
-    labels: ["2026-05-16", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23", "2026-05-24"],
-    datasets: [{ label: 'New listings', data: [1592, 23, 6, 52, 58, 76, 74, 70, 62, 39], backgroundColor: '#3b82f6' }]
+    labels: ["2026-05-16", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23", "2026-05-24", "2026-05-25"],
+    datasets: [{ label: 'New listings', data: [1592, 23, 6, 52, 58, 76, 74, 70, 62, 39, 54], backgroundColor: '#3b82f6' }]
   },
   options: {
     plugins: { title: { display: true, text: 'New Listings per Scrape Run' } },
