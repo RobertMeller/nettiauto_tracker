@@ -138,6 +138,10 @@ def generate_html(conn, output_path="report.html"):
         (s.get("max_distance_km", 0) for s in searches_data.get("searches", [])),
         default=200,
     )
+    max_mileage_km = max(
+        (s.get("max_mileage", 0) for s in searches_data.get("searches", [])),
+        default=200000,
+    )
     origin_lat = origin_lon = None
     if origin_city:
         row = conn.execute(
@@ -241,7 +245,7 @@ def generate_html(conn, output_path="report.html"):
         km_yr = f"{round(r['mileage'] / (current_year - r['year'])):,}" \
                 if r["year"] and r["mileage"] and r["year"] < current_year else "–"
         table_rows += f"""
-        <tr class="{row_class}" data-dist="{dist_km}">
+        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -315,6 +319,8 @@ def generate_html(conn, output_path="report.html"):
 <div class="filter-bar">
   <label for="distSlider">Max distance from {origin_city or "origin"}: <strong id="distVal">{max_slider_km}</strong> km</label>
   <input type="range" id="distSlider" min="10" max="{max_slider_km}" step="10" value="{max_slider_km}">
+  <label for="mileageSlider" style="margin-left:1.5rem">Max mileage: <strong id="mileageVal">{max_mileage_km:,}</strong> km</label>
+  <input type="range" id="mileageSlider" min="10000" max="{max_mileage_km}" step="5000" value="{max_mileage_km}">
 </div>
 <table>
   <thead><tr>
@@ -363,16 +369,25 @@ const activity = new Chart(document.getElementById('activity'), {{
 }});
 
 
+function applyFilters() {{
+    const maxDist    = parseInt(document.getElementById('distSlider').value);
+    const maxMileage = parseInt(document.getElementById('mileageSlider').value);
+    document.querySelectorAll('tbody tr').forEach(tr => {{
+        const dist    = tr.dataset.dist;
+        const mileage = tr.dataset.mileage;
+        const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
+        const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
+        tr.style.display = (distOk && mileageOk) ? '' : 'none';
+    }});
+}}
+
 const slider = document.getElementById('distSlider');
 const distVal = document.getElementById('distVal');
-slider.addEventListener('input', () => {{
-    distVal.textContent = slider.value;
-    const max = parseInt(slider.value);
-    document.querySelectorAll('tbody tr').forEach(tr => {{
-        const dist = tr.dataset.dist;
-        tr.style.display = (dist === '' || parseFloat(dist) <= max) ? '' : 'none';
-    }});
-}});
+slider.addEventListener('input', () => {{ distVal.textContent = parseInt(slider.value).toLocaleString(); applyFilters(); }});
+
+const mileageSlider = document.getElementById('mileageSlider');
+const mileageVal = document.getElementById('mileageVal');
+mileageSlider.addEventListener('input', () => {{ mileageVal.textContent = parseInt(mileageSlider.value).toLocaleString(); applyFilters(); }});
 </script>
 </body>
 </html>"""
