@@ -14,6 +14,8 @@ import csv
 import argparse
 import sys
 import json
+import math
+import tomllib
 from datetime import date, datetime
 from pathlib import Path
 
@@ -103,6 +105,14 @@ def export_csv(conn, filename="nettiauto_export.csv"):
     print(f"\nExported {len(rows)} listings to {filename}")
 
 
+def _haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi, dlambda = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
 def generate_html(conn, output_path="report.html"):
     today = date.today().isoformat()
 
@@ -115,6 +125,37 @@ def generate_html(conn, output_path="report.html"):
     ).fetchall()
 
     latest_run_date = runs[-1]["run_date"][:10] if runs else today
+
+    # Origin city and per-listing distances for the distance slider
+    searches_file = Path(__file__).parent / "searches.toml"
+    with open(searches_file, "rb") as f:
+        searches_data = tomllib.load(f)
+    origin_city = next(
+        (s["origin_city"] for s in searches_data.get("searches", []) if s.get("origin_city")),
+        None,
+    )
+    max_slider_km = max(
+        (s.get("max_distance_km", 0) for s in searches_data.get("searches", [])),
+        default=200,
+    )
+    origin_lat = origin_lon = None
+    if origin_city:
+        row = conn.execute(
+            "SELECT lat, lon FROM city_coords WHERE city_name = ?", (origin_city,)
+        ).fetchone()
+        if row and row["lat"]:
+            origin_lat, origin_lon = row["lat"], row["lon"]
+
+    city_coords_map = {}
+    if filtered:
+        locations = list({r["location"] for r in filtered if r["location"]})
+        placeholders = ",".join("?" * len(locations))
+        for cr in conn.execute(
+            f"SELECT city_name, lat, lon FROM city_coords WHERE city_name IN ({placeholders})",
+            locations,
+        ).fetchall():
+            if cr["lat"]:
+                city_coords_map[cr["city_name"]] = (cr["lat"], cr["lon"])
 
     # First price per listing for price-change badges
     first_prices = {}
@@ -180,8 +221,12 @@ def generate_html(conn, output_path="report.html"):
                 price_badge = f' <span class="badge-down">↓ {abs(diff):,} €</span>'
             else:
                 price_badge = f' <span class="badge-up">↑ {diff:,} €</span>'
+        dist_km = ""
+        if origin_lat and r["location"] in city_coords_map:
+            lat, lon = city_coords_map[r["location"]]
+            dist_km = f"{_haversine(origin_lat, origin_lon, lat, lon):.0f}"
         table_rows += f"""
-        <tr class="{row_class}">
+        <tr class="{row_class}" data-dist="{dist_km}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -224,6 +269,9 @@ def generate_html(conn, output_path="report.html"):
   tr.inactive td a {{ color: #94a3b8; pointer-events: none; }}
   .badge-down {{ color: #16a34a; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
   .badge-up {{ color: #dc2626; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
+  .filter-bar {{ display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
+  .filter-bar label {{ font-size: 0.875rem; color: #334155; white-space: nowrap; }}
+  .filter-bar input[type=range] {{ width: 220px; accent-color: #3b82f6; }}
 </style>
 </head>
 <body>
@@ -231,6 +279,10 @@ def generate_html(conn, output_path="report.html"):
 <p class="meta">Generated {today} &nbsp;·&nbsp; {len(filtered)} filtered listings</p>
 
 <h2>Matched Listings</h2>
+<div class="filter-bar">
+  <label for="distSlider">Max distance from {origin_city or "origin"}: <strong id="distVal">{max_slider_km}</strong> km</label>
+  <input type="range" id="distSlider" min="10" max="{max_slider_km}" step="10" value="{max_slider_km}">
+</div>
 <table>
   <thead><tr>
     <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th>
@@ -277,6 +329,17 @@ const activity = new Chart(document.getElementById('activity'), {{
   }}
 }});
 
+
+const slider = document.getElementById('distSlider');
+const distVal = document.getElementById('distVal');
+slider.addEventListener('input', () => {{
+    distVal.textContent = slider.value;
+    const max = parseInt(slider.value);
+    document.querySelectorAll('tbody tr').forEach(tr => {{
+        const dist = tr.dataset.dist;
+        tr.style.display = (dist === '' || parseFloat(dist) <= max) ? '' : 'none';
+    }});
+}});
 </script>
 </body>
 </html>"""
