@@ -6,7 +6,7 @@
 make = "toyota"
 model = "corolla"
 min_price = 5000        # EUR
-max_price = 12000       # EUR
+max_price = 15000       # EUR
 max_mileage = 200000    # km
 tow_hitch = true
 ac = true
@@ -20,7 +20,7 @@ max_distance_km = 100
 make = "toyota"
 model = "avensis"
 min_price = 5000
-max_price = 12000
+max_price = 15000
 max_mileage = 200000
 tow_hitch = true
 ac = true

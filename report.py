@@ -114,16 +114,19 @@ def generate_html(conn, output_path="report.html"):
         "SELECT run_date, listings_new FROM scrape_runs ORDER BY run_date"
     ).fetchall()
 
-    # Price history for filtered listings
-    history_by_id = {}
-    for row in filtered:
-        lid = row["listing_id"]
-        rows = conn.execute(
-            "SELECT recorded_date, price FROM price_history WHERE listing_id=? ORDER BY recorded_date",
-            (lid,)
-        ).fetchall()
-        if len(rows) > 1:
-            history_by_id[lid] = [{"x": r["recorded_date"], "y": r["price"]} for r in rows]
+    latest_run_date = runs[-1]["run_date"][:10] if runs else today
+
+    # First price per listing for price-change badges
+    first_prices = {}
+    if filtered:
+        ids = [row["listing_id"] for row in filtered]
+        placeholders = ",".join("?" * len(ids))
+        for fp_row in conn.execute(
+            f"SELECT listing_id, price FROM price_history "
+            f"WHERE id IN (SELECT MIN(id) FROM price_history WHERE listing_id IN ({placeholders}) GROUP BY listing_id)",
+            ids,
+        ).fetchall():
+            first_prices[fp_row["listing_id"]] = fp_row["price"]
 
     # Scatter data — one point per filtered listing
     scatter_datasets = {}
@@ -154,18 +157,6 @@ def generate_html(conn, output_path="report.html"):
     activity_labels = [r["run_date"][:10] for r in runs]
     activity_data = [r["listings_new"] for r in runs]
 
-    # Price history chart datasets
-    history_datasets = []
-    for i, (lid, points) in enumerate(history_by_id.items()):
-        row = next(r for r in filtered if r["listing_id"] == lid)
-        history_datasets.append({
-            "label": f"{row['year']} {row['make'].title()} {row['model'].title()} ({lid})",
-            "data": points,
-            "borderColor": colors[i % len(colors)],
-            "backgroundColor": "transparent",
-            "tension": 0.3,
-        })
-
     # Table rows HTML
     def days_on_market(first, last):
         try:
@@ -179,11 +170,21 @@ def generate_html(conn, output_path="report.html"):
         dom = days_on_market(r["date_first_seen"], r["date_last_seen"])
         engine = f"{r['engine_cc']}cc" if r["engine_cc"] else "–"
         fuel = r["fuel_type"] or "–"
+        is_active = r["date_last_seen"] == latest_run_date
+        row_class = "active" if is_active else "inactive"
+        first_price = first_prices.get(r["listing_id"])
+        price_badge = ""
+        if first_price and r["price"] and first_price != r["price"]:
+            diff = r["price"] - first_price
+            if diff < 0:
+                price_badge = f' <span class="badge-down">↓ {abs(diff):,} €</span>'
+            else:
+                price_badge = f' <span class="badge-up">↑ {diff:,} €</span>'
         table_rows += f"""
-        <tr>
+        <tr class="{row_class}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
-            <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €</td>
+            <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
             <td class="num">{f"{r['mileage']:,}" if r['mileage'] else '–'} km</td>
             <td>{engine}</td>
             <td>{fuel}</td>
@@ -191,8 +192,6 @@ def generate_html(conn, output_path="report.html"):
             <td class="num">{dom}</td>
             <td><a href="{r['url']}" target="_blank">View →</a></td>
         </tr>"""
-
-    show_history = "block" if history_datasets else "none"
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -219,6 +218,12 @@ def generate_html(conn, output_path="report.html"):
   .chart-box {{ background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
   .chart-box.wide {{ grid-column: 1 / -1; }}
   canvas {{ max-height: 320px; }}
+  tr.active td {{ background: #f0fdf4; }}
+  tr.active:hover td {{ background: #dcfce7; }}
+  tr.inactive td {{ color: #94a3b8; }}
+  tr.inactive td a {{ color: #94a3b8; pointer-events: none; }}
+  .badge-down {{ color: #16a34a; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
+  .badge-up {{ color: #dc2626; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
 </style>
 </head>
 <body>
@@ -241,9 +246,6 @@ def generate_html(conn, output_path="report.html"):
   </div>
   <div class="chart-box">
     <canvas id="activity"></canvas>
-  </div>
-  <div class="chart-box wide" style="display:{show_history}" id="historyBox">
-    <canvas id="history"></canvas>
   </div>
 </div>
 
@@ -275,19 +277,6 @@ const activity = new Chart(document.getElementById('activity'), {{
   }}
 }});
 
-{"" if not history_datasets else f"""
-const history = new Chart(document.getElementById('history'), {{
-  type: 'line',
-  data: {{ datasets: {json.dumps(history_datasets)} }},
-  options: {{
-    plugins: {{ title: {{ display: true, text: 'Price History' }} }},
-    scales: {{
-      x: {{ type: 'category', title: {{ display: true, text: 'Date' }} }},
-      y: {{ title: {{ display: true, text: 'Price (€)' }} }}
-    }}
-  }}
-}});
-"""}
 </script>
 </body>
 </html>"""
