@@ -295,6 +295,29 @@ def extract_listing_id(url: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+# Canonical Finnish body type names, with all known aliases mapped to them
+_BODY_TYPE_MAP = {
+    "farmari":       "Farmari",
+    "wagon":         "Farmari",
+    "station wagon": "Farmari",
+    "sedan":         "Sedan",
+    "hatchback":     "Hatchback",
+    "viistoperä":    "Viistoperä",
+    "coupe":         "Coupe",
+    "tila-auto":     "Tila-auto",
+    "avoauto":       "Avoauto",
+    "maastoauto":    "Maastoauto",
+    "pakettiauto":   "Pakettiauto",
+}
+
+def _parse_body_type(text: str) -> Optional[str]:
+    t = text.lower()
+    for alias, canonical in _BODY_TYPE_MAP.items():
+        if alias in t:
+            return canonical
+    return None
+
+
 def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
     """Parse one listing card from the search results page."""
     try:
@@ -350,12 +373,7 @@ def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
                 break
 
         # --- Body type from card text ---
-        body_type = None
-        for body in ["Farmari", "Sedan", "Hatchback", "Viistoperä", "Coupe",
-                     "Tila-auto", "Wagon", "Station wagon"]:
-            if body.lower() in text_content.lower():
-                body_type = body
-                break
+        body_type = _parse_body_type(text_content)
 
         today = date.today().isoformat()
         return Listing(
@@ -408,11 +426,8 @@ def enrich_from_listing_page(listing: Listing) -> Listing:
             break
 
     # Body type
-    for body in ["Farmari", "Sedan", "Hatchback", "Viistoperä", "Coupe",
-                 "Tila-auto", "Wagon", "Station wagon"]:
-        if body.lower() in text.lower():
-            listing.body_type = body
-            break
+    if not listing.body_type:
+        listing.body_type = _parse_body_type(text)
 
     # Location (more reliable on detail page)
     if not listing.location:
@@ -710,6 +725,13 @@ def run(dry_run: bool = False):
             VALUES (?,?,?,?)
         """, (run_date, total_found, total_new, total_updated))
         conn.commit()
+        # Normalise legacy body type aliases (e.g. "Wagon" → "Farmari")
+        for alias, canonical in _BODY_TYPE_MAP.items():
+            conn.execute(
+                "UPDATE listings SET body_type = ? WHERE lower(body_type) = ?",
+                (canonical, alias),
+            )
+        conn.commit()
         log.info(f"\n{'='*60}")
         log.info(f"Geocoding new cities…")
         geocode_cities(conn)
@@ -732,6 +754,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.filter_only:
         conn = init_db(DB_PATH)
+        for alias, canonical in _BODY_TYPE_MAP.items():
+            conn.execute("UPDATE listings SET body_type = ? WHERE lower(body_type) = ?", (canonical, alias))
+        conn.commit()
         log.info("Geocoding new cities…")
         geocode_cities(conn)
         log.info("Applying filters from searches.toml…")
