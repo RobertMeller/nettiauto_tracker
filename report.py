@@ -249,6 +249,7 @@ def generate_html(conn, output_path="report.html"):
             <td class="num">{km_yr}</td>
             <td>{engine}</td>
             <td>{fuel}</td>
+            <td>{r['body_type'] or '–'}</td>
             <td>{r['location'] or '–'}</td>
             <td class="num {dom_class}">{dom_str}</td>
             <td><a href="{r['url']}" target="_blank">View →</a></td>
@@ -318,7 +319,7 @@ def generate_html(conn, output_path="report.html"):
 <table>
   <thead><tr>
     <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th><th>km/yr</th>
-    <th>Engine</th><th>Fuel</th><th>Location</th><th>On market</th><th>Link</th>
+    <th>Engine</th><th>Fuel</th><th>Body</th><th>Location</th><th>On market</th><th>Link</th>
   </tr></thead>
   <tbody>{table_rows}</tbody>
 </table>
