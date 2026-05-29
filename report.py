@@ -169,6 +169,16 @@ def generate_html(conn, output_path="report.html"):
         ).fetchall():
             first_prices[fp_row["listing_id"]] = fp_row["price"]
 
+    # Market price/mileage stats
+    prices   = sorted([r["price"]   for r in filtered if r["price"]])
+    mileages = sorted([r["mileage"] for r in filtered if r["mileage"]])
+    def _avg(lst):    return round(sum(lst) / len(lst)) if lst else None
+    def _median(lst): return lst[len(lst) // 2]         if lst else None
+    stat_avg_price    = _avg(prices)
+    stat_med_price    = _median(prices)
+    stat_avg_mileage  = _avg(mileages)
+    stat_med_mileage  = _median(mileages)
+
     # Scatter data — one point per filtered listing
     scatter_datasets = {}
     for row in filtered:
@@ -199,16 +209,19 @@ def generate_html(conn, output_path="report.html"):
     activity_data = [r["listings_new"] for r in runs]
 
     # Table rows HTML
-    def days_on_market(first, last):
+    def dom_days(first, last):
         try:
-            d = (datetime.fromisoformat(last) - datetime.fromisoformat(first)).days
-            return f"{d}d"
+            return (datetime.fromisoformat(last) - datetime.fromisoformat(first)).days
         except Exception:
-            return "–"
+            return None
 
+    current_year = date.today().year
     table_rows = ""
     for r in filtered:
-        dom = days_on_market(r["date_first_seen"], r["date_last_seen"])
+        days = dom_days(r["date_first_seen"], r["date_last_seen"])
+        dom_str   = f"{days}d" if days is not None else "–"
+        dom_class = "dom-fresh" if days is not None and days < 14 else \
+                    "dom-aging" if days is not None and days < 30 else "dom-stale"
         engine = f"{r['engine_cc']}cc" if r["engine_cc"] else "–"
         fuel = r["fuel_type"] or "–"
         is_active = r["date_last_seen"] == latest_run_date
@@ -225,16 +238,19 @@ def generate_html(conn, output_path="report.html"):
         if origin_lat and r["location"] in city_coords_map:
             lat, lon = city_coords_map[r["location"]]
             dist_km = f"{_haversine(origin_lat, origin_lon, lat, lon):.0f}"
+        km_yr = f"{round(r['mileage'] / (current_year - r['year'])):,}" \
+                if r["year"] and r["mileage"] and r["year"] < current_year else "–"
         table_rows += f"""
         <tr class="{row_class}" data-dist="{dist_km}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
             <td class="num">{f"{r['mileage']:,}" if r['mileage'] else '–'} km</td>
+            <td class="num">{km_yr}</td>
             <td>{engine}</td>
             <td>{fuel}</td>
             <td>{r['location'] or '–'}</td>
-            <td class="num">{dom}</td>
+            <td class="num {dom_class}">{dom_str}</td>
             <td><a href="{r['url']}" target="_blank">View →</a></td>
         </tr>"""
 
@@ -272,6 +288,13 @@ def generate_html(conn, output_path="report.html"):
   .filter-bar {{ display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
   .filter-bar label {{ font-size: 0.875rem; color: #334155; white-space: nowrap; }}
   .filter-bar input[type=range] {{ width: 220px; accent-color: #3b82f6; }}
+  .stats-bar {{ display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }}
+  .stat {{ background: white; border-radius: 8px; padding: 0.75rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 0.2rem; min-width: 130px; }}
+  .stat-label {{ font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }}
+  .stat-val {{ font-size: 1.1rem; font-weight: 600; color: #1e293b; font-variant-numeric: tabular-nums; }}
+  .dom-fresh {{ color: #16a34a; font-weight: 600; }}
+  .dom-aging {{ color: #d97706; font-weight: 600; }}
+  .dom-stale {{ color: #dc2626; font-weight: 600; }}
 </style>
 </head>
 <body>
@@ -279,13 +302,19 @@ def generate_html(conn, output_path="report.html"):
 <p class="meta">Generated {today} &nbsp;·&nbsp; {len(filtered)} filtered listings</p>
 
 <h2>Matched Listings</h2>
+<div class="stats-bar">
+  <div class="stat"><span class="stat-label">Avg price</span><span class="stat-val">{f"{stat_avg_price:,} €" if stat_avg_price else "–"}</span></div>
+  <div class="stat"><span class="stat-label">Median price</span><span class="stat-val">{f"{stat_med_price:,} €" if stat_med_price else "–"}</span></div>
+  <div class="stat"><span class="stat-label">Avg mileage</span><span class="stat-val">{f"{stat_avg_mileage:,} km" if stat_avg_mileage else "–"}</span></div>
+  <div class="stat"><span class="stat-label">Median mileage</span><span class="stat-val">{f"{stat_med_mileage:,} km" if stat_med_mileage else "–"}</span></div>
+</div>
 <div class="filter-bar">
   <label for="distSlider">Max distance from {origin_city or "origin"}: <strong id="distVal">{max_slider_km}</strong> km</label>
   <input type="range" id="distSlider" min="10" max="{max_slider_km}" step="10" value="{max_slider_km}">
 </div>
 <table>
   <thead><tr>
-    <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th>
+    <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th><th>km/yr</th>
     <th>Engine</th><th>Fuel</th><th>Location</th><th>On market</th><th>Link</th>
   </tr></thead>
   <tbody>{table_rows}</tbody>
