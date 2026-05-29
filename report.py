@@ -268,10 +268,13 @@ def generate_html(conn, output_path="report.html"):
   .meta {{ color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }}
   h2 {{ font-size: 1.1rem; margin: 2rem 0 0.75rem; color: #334155; }}
   table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
-  th {{ background: #1e293b; color: white; text-align: left; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; }}
-  td {{ padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }}
+  th {{ background: #1e293b; color: white; text-align: center; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; border-right: 1px solid #334155; }}
+  th:last-child {{ border-right: none; }}
+  td {{ padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; font-size: 0.875rem; }}
+  td:last-child {{ border-right: none; }}
   tr:last-child td {{ border-bottom: none; }}
   tr:hover td {{ background: #f8fafc; }}
+  td {{ text-align: center; }}
   td.num {{ text-align: right; font-variant-numeric: tabular-nums; }}
   a {{ color: #3b82f6; text-decoration: none; }}
   a:hover {{ text-decoration: underline; }}
