@@ -242,10 +242,11 @@ def generate_html(conn, output_path="report.html"):
         if origin_lat and r["location"] in city_coords_map:
             lat, lon = city_coords_map[r["location"]]
             dist_km = f"{_haversine(origin_lat, origin_lon, lat, lon):.0f}"
-        km_yr = f"{round(r['mileage'] / (current_year - r['year'])):,}" \
-                if r["year"] and r["mileage"] and r["year"] < current_year else "–"
+        km_yr_raw = round(r['mileage'] / (current_year - r['year'])) \
+                    if r["year"] and r["mileage"] and r["year"] < current_year else None
+        km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
         table_rows += f"""
-        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}">
+        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -293,9 +294,11 @@ def generate_html(conn, output_path="report.html"):
   tr.inactive td a {{ color: #94a3b8; pointer-events: none; }}
   .badge-down {{ color: #16a34a; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
   .badge-up {{ color: #dc2626; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }}
-  .filter-bar {{ display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
+  .filter-bar {{ display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); flex-wrap: wrap; }}
   .filter-bar label {{ font-size: 0.875rem; color: #334155; white-space: nowrap; }}
   .filter-bar input[type=range] {{ width: 220px; accent-color: #3b82f6; }}
+  .btn-toggle {{ margin-left: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-weight: 600; border: 1.5px solid #cbd5e1; border-radius: 6px; background: white; color: #334155; cursor: pointer; white-space: nowrap; }}
+  .btn-toggle.active {{ background: #1e293b; color: white; border-color: #1e293b; }}
   .stats-bar {{ display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }}
   .stat {{ background: white; border-radius: 8px; padding: 0.75rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 0.2rem; min-width: 130px; }}
   .stat-label {{ font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }}
@@ -303,6 +306,10 @@ def generate_html(conn, output_path="report.html"):
   .dom-fresh {{ color: #16a34a; font-weight: 600; }}
   .dom-aging {{ color: #d97706; font-weight: 600; }}
   .dom-stale {{ color: #dc2626; font-weight: 600; }}
+  th.sortable {{ cursor: pointer; user-select: none; }}
+  th.sortable:hover {{ background: #2d3f55; }}
+  th.sort-desc::after {{ content: ' ↓'; opacity: 0.8; }}
+  th.sort-asc::after  {{ content: ' ↑'; opacity: 0.8; }}
 </style>
 </head>
 <body>
@@ -321,11 +328,12 @@ def generate_html(conn, output_path="report.html"):
   <input type="range" id="distSlider" min="10" max="{max_slider_km}" step="10" value="{max_slider_km}">
   <label for="mileageSlider" style="margin-left:1.5rem">Max mileage: <strong id="mileageVal">{max_mileage_km:,}</strong> km</label>
   <input type="range" id="mileageSlider" min="10000" max="{max_mileage_km}" step="5000" value="{max_mileage_km}">
+  <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
 </div>
 <table>
   <thead><tr>
-    <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th><th>km/yr</th>
-    <th>Engine</th><th>Fuel</th><th>Body</th><th>Location</th><th>On market</th><th>Link</th>
+    <th class="sortable" data-sort="year">Year</th><th>Model</th><th class="sortable" data-sort="price">Price</th><th class="sortable" data-sort="mileage">Mileage</th><th class="sortable" data-sort="kmyr">km/yr</th>
+    <th>Engine</th><th>Fuel</th><th>Body</th><th>Location</th><th class="sortable" data-sort="dom">On market</th><th>Link</th>
   </tr></thead>
   <tbody>{table_rows}</tbody>
 </table>
@@ -369,6 +377,14 @@ const activity = new Chart(document.getElementById('activity'), {{
 }});
 
 
+let hideSold = false;
+function toggleHideSold() {{
+    hideSold = !hideSold;
+    const btn = document.getElementById('hideSoldBtn');
+    btn.textContent = hideSold ? 'Show sold' : 'Hide sold';
+    btn.classList.toggle('active', hideSold);
+    applyFilters();
+}}
 function applyFilters() {{
     const maxDist    = parseInt(document.getElementById('distSlider').value);
     const maxMileage = parseInt(document.getElementById('mileageSlider').value);
@@ -377,9 +393,33 @@ function applyFilters() {{
         const mileage = tr.dataset.mileage;
         const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
         const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
-        tr.style.display = (distOk && mileageOk) ? '' : 'none';
+        const soldOk    = !hideSold || tr.classList.contains('active');
+        tr.style.display = (distOk && mileageOk && soldOk) ? '' : 'none';
     }});
 }}
+
+let sortCol = null, sortDir = 'desc';
+document.querySelectorAll('th.sortable').forEach(th => {{
+    th.addEventListener('click', () => {{
+        const col = th.dataset.sort;
+        sortDir = (sortCol === col && sortDir === 'desc') ? 'asc' : 'desc';
+        sortCol = col;
+        document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(sortDir === 'desc' ? 'sort-desc' : 'sort-asc');
+        const tbody = document.querySelector('tbody');
+        Array.from(tbody.querySelectorAll('tr'))
+            .sort((a, b) => {{
+                const av = parseFloat(a.dataset[col]);
+                const bv = parseFloat(b.dataset[col]);
+                const an = isNaN(av), bn = isNaN(bv);
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return sortDir === 'desc' ? bv - av : av - bv;
+            }})
+            .forEach(row => tbody.appendChild(row));
+    }});
+}});
 
 const slider = document.getElementById('distSlider');
 const distVal = document.getElementById('distVal');
