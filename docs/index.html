@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nettiauto Report — 2026-05-29</title>
+<title>Nettiauto Report — 2026-05-30</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,10 +12,13 @@
   .meta { color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }
   h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; color: #334155; }
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  th { background: #1e293b; color: white; text-align: left; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; }
-  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
+  th { background: #1e293b; color: white; text-align: center; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; border-right: 1px solid #334155; }
+  th:last-child { border-right: none; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; font-size: 0.875rem; }
+  td:last-child { border-right: none; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: #f8fafc; }
+  td { text-align: center; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   a { color: #3b82f6; text-decoration: none; }
   a:hover { text-decoration: underline; }
@@ -23,95 +26,1015 @@
   .chart-box { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .chart-box.wide { grid-column: 1 / -1; }
   canvas { max-height: 320px; }
+  tr.active td { background: #f0fdf4; }
+  tr.active:hover td { background: #dcfce7; }
+  tr.inactive td { color: #94a3b8; }
+  tr.inactive td a { color: #94a3b8; pointer-events: none; }
+  .badge-down { color: #16a34a; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }
+  .badge-up { color: #dc2626; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }
+  .filter-bar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); flex-wrap: wrap; }
+  .filter-bar label { font-size: 0.875rem; color: #334155; white-space: nowrap; }
+  .filter-bar input[type=range] { width: 220px; accent-color: #3b82f6; }
+  .btn-toggle { margin-left: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-weight: 600; border: 1.5px solid #cbd5e1; border-radius: 6px; background: white; color: #334155; cursor: pointer; white-space: nowrap; }
+  .btn-toggle.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .stats-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat { background: white; border-radius: 8px; padding: 0.75rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 0.2rem; min-width: 130px; }
+  .stat-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+  .stat-val { font-size: 1.1rem; font-weight: 600; color: #1e293b; font-variant-numeric: tabular-nums; }
+  .dom-fresh { color: #16a34a; font-weight: 600; }
+  .dom-aging { color: #d97706; font-weight: 600; }
+  .dom-stale { color: #dc2626; font-weight: 600; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { background: #2d3f55; }
+  th.sort-desc::after { content: ' ↓'; opacity: 0.8; }
+  th.sort-asc::after  { content: ' ↑'; opacity: 0.8; }
 </style>
 </head>
 <body>
 <h1>Nettiauto Tracker</h1>
-<p class="meta">Generated 2026-05-29 &nbsp;·&nbsp; 7 filtered listings</p>
+<p class="meta">Generated 2026-05-30 &nbsp;·&nbsp; 74 filtered listings</p>
 
 <h2>Matched Listings</h2>
+<div class="stats-bar">
+  <div class="stat"><span class="stat-label">Avg price</span><span class="stat-val">9,505 €</span></div>
+  <div class="stat"><span class="stat-label">Median price</span><span class="stat-val">9,500 €</span></div>
+  <div class="stat"><span class="stat-label">Avg mileage</span><span class="stat-val">144,737 km</span></div>
+  <div class="stat"><span class="stat-label">Median mileage</span><span class="stat-val">150,000 km</span></div>
+</div>
+<div class="filter-bar">
+  <label for="distSlider">Max distance from Turku: <strong id="distVal">200</strong> km</label>
+  <input type="range" id="distSlider" min="10" max="200" step="10" value="200">
+  <label for="mileageSlider" style="margin-left:1.5rem">Max mileage: <strong id="mileageVal">200,000</strong> km</label>
+  <input type="range" id="mileageSlider" min="10000" max="200000" step="5000" value="200000">
+  <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
+</div>
 <table>
   <thead><tr>
-    <th>Year</th><th>Model</th><th>Price</th><th>Mileage</th>
-    <th>Engine</th><th>Fuel</th><th>Location</th><th>On market</th><th>Link</th>
+    <th class="sortable" data-sort="year">Year</th><th>Model</th><th class="sortable" data-sort="price">Price</th><th class="sortable" data-sort="mileage">Mileage</th><th class="sortable" data-sort="kmyr">km/yr</th>
+    <th>Engine</th><th>Fuel</th><th>Body</th><th>Location</th><th class="sortable" data-sort="dom">On market</th><th>Link</th>
   </tr></thead>
   <tbody>
-        <tr>
+        <tr class="active" data-dist="149" data-mileage="175000" data-year="2006" data-price="5850" data-kmyr="8750" data-dom="14">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,850 €</td>
+            <td class="num">175,000 km</td>
+            <td class="num">8,750</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15730076" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="151" data-mileage="185000" data-year="2007" data-price="5880" data-kmyr="9737" data-dom="14">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,880 € <span class="badge-down">↓ 600 €</span></td>
+            <td class="num">185,000 km</td>
+            <td class="num">9,737</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15669517" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="151" data-mileage="178000" data-year="2006" data-price="5880" data-kmyr="8900" data-dom="14">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,880 €</td>
+            <td class="num">178,000 km</td>
+            <td class="num">8,900</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Hatchback</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15734969" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="143" data-mileage="145000" data-year="2006" data-price="5900" data-kmyr="7250" data-dom="12">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,900 €</td>
+            <td class="num">145,000 km</td>
+            <td class="num">7,250</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15701688" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="125" data-mileage="155000" data-year="2007" data-price="5900" data-kmyr="8158" data-dom="1">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,900 €</td>
+            <td class="num">155,000 km</td>
+            <td class="num">8,158</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15772342" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="132" data-mileage="100000" data-year="2006" data-price="5950" data-kmyr="5000" data-dom="7">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,950 €</td>
+            <td class="num">100,000 km</td>
+            <td class="num">5,000</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Nokia</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15752224" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="152" data-mileage="148000" data-year="2005" data-price="5980" data-kmyr="7048" data-dom="12">
+            <td>2005</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,980 €</td>
+            <td class="num">148,000 km</td>
+            <td class="num">7,048</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tuusula</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15750536" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="149" data-mileage="191000" data-year="2007" data-price="5990" data-kmyr="10053" data-dom="5">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">5,990 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">10,053</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15757288" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="151" data-mileage="174000" data-year="2008" data-price="6200" data-kmyr="9667" data-dom="5">
+            <td>2008</td>
+            <td>Toyota Avensis</td>
+            <td class="num">6,200 €</td>
+            <td class="num">174,000 km</td>
+            <td class="num">9,667</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15764482" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="149" data-mileage="185000" data-year="2007" data-price="6250" data-kmyr="9737" data-dom="14">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,250 € <span class="badge-down">↓ 200 €</span></td>
+            <td class="num">185,000 km</td>
+            <td class="num">9,737</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15699550" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="149" data-mileage="191000" data-year="2007" data-price="6390" data-kmyr="10053" data-dom="4">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,390 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">10,053</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/14007744" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="143" data-mileage="153000" data-year="2006" data-price="6390" data-kmyr="7650" data-dom="6">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,390 €</td>
+            <td class="num">153,000 km</td>
+            <td class="num">7,650</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15761028" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="182000" data-year="2006" data-price="6490" data-kmyr="9100" data-dom="14">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,490 €</td>
+            <td class="num">182,000 km</td>
+            <td class="num">9,100</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Hatchback</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15744962" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="134" data-mileage="118000" data-year="2006" data-price="6590" data-kmyr="5900" data-dom="14">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,590 € <span class="badge-down">↓ 400 €</span></td>
+            <td class="num">118,000 km</td>
+            <td class="num">5,900</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15585915" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="142" data-mileage="187000" data-year="2007" data-price="6680" data-kmyr="9842" data-dom="14">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,680 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">187,000 km</td>
+            <td class="num">9,842</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15596946" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="186" data-mileage="122000" data-year="2006" data-price="6900" data-kmyr="6100" data-dom="11">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,900 €</td>
+            <td class="num">122,000 km</td>
+            <td class="num">6,100</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15642020" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="105" data-mileage="164500" data-year="2012" data-price="6950" data-kmyr="11750" data-dom="6">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,950 €</td>
+            <td class="num">164,500 km</td>
+            <td class="num">11,750</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Sastamala</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15721873" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="141" data-mileage="189000" data-year="2006" data-price="6990" data-kmyr="9450" data-dom="6">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,990 €</td>
+            <td class="num">189,000 km</td>
+            <td class="num">9,450</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Ylöjärvi</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15687846" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="0" data-mileage="142000" data-year="2008" data-price="6990" data-kmyr="7889" data-dom="5">
             <td>2008</td>
             <td>Toyota Corolla</td>
             <td class="num">6,990 €</td>
             <td class="num">142,000 km</td>
+            <td class="num">7,889</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
             <td>Turku</td>
-            <td class="num">5d</td>
+            <td class="num dom-fresh">5d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15751681" target="_blank">View →</a></td>
         </tr>
-        <tr>
+        <tr class="active" data-dist="58" data-mileage="168000" data-year="2009" data-price="6990" data-kmyr="9882" data-dom="4">
             <td>2009</td>
             <td>Toyota Corolla</td>
             <td class="num">6,990 €</td>
             <td class="num">168,000 km</td>
+            <td class="num">9,882</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
             <td>Salo</td>
-            <td class="num">3d</td>
+            <td class="num dom-fresh">4d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15767775" target="_blank">View →</a></td>
         </tr>
-        <tr>
+        <tr class="active" data-dist="7" data-mileage="129000" data-year="2007" data-price="6990" data-kmyr="6789" data-dom="0">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">6,990 €</td>
+            <td class="num">129,000 km</td>
+            <td class="num">6,789</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Raisio</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15776990" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="7" data-mileage="163000" data-year="2006" data-price="6990" data-kmyr="8150" data-dom="14">
             <td>2006</td>
             <td>Toyota Avensis</td>
             <td class="num">6,990 €</td>
             <td class="num">163,000 km</td>
+            <td class="num">8,150</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
             <td>Raisio</td>
-            <td class="num">13d</td>
+            <td class="num dom-aging">14d</td>
             <td><a href="https://www.nettiauto.com/toyota/avensis/15674074" target="_blank">View →</a></td>
         </tr>
-        <tr>
+        <tr class="inactive" data-dist="89" data-mileage="95177" data-year="2005" data-price="6999" data-kmyr="4532" data-dom="4">
             <td>2005</td>
             <td>Toyota Corolla</td>
             <td class="num">6,999 €</td>
             <td class="num">95,177 km</td>
+            <td class="num">4,532</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
             <td>Kokemäki</td>
-            <td class="num">4d</td>
+            <td class="num dom-fresh">4d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15667876" target="_blank">View →</a></td>
         </tr>
-        <tr>
+        <tr class="active" data-dist="151" data-mileage="191000" data-year="2010" data-price="7200" data-kmyr="11938" data-dom="14">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,200 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">11,938</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15733256" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="134" data-mileage="174000" data-year="2009" data-price="7600" data-kmyr="10235" data-dom="7">
+            <td>2009</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,600 €</td>
+            <td class="num">174,000 km</td>
+            <td class="num">10,235</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15761475" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="142" data-mileage="194000" data-year="2009" data-price="7600" data-kmyr="11412" data-dom="2">
+            <td>2009</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,600 €</td>
+            <td class="num">194,000 km</td>
+            <td class="num">11,412</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15771108" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="194" data-mileage="199000" data-year="2006" data-price="7690" data-kmyr="9950" data-dom="1">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,690 €</td>
+            <td class="num">199,000 km</td>
+            <td class="num">9,950</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15773205" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="141" data-mileage="170000" data-year="2008" data-price="7900" data-kmyr="9444" data-dom="14">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,900 €</td>
+            <td class="num">170,000 km</td>
+            <td class="num">9,444</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Ylöjärvi</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15417672" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="152" data-mileage="149000" data-year="2008" data-price="7900" data-kmyr="8278" data-dom="9">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,900 €</td>
+            <td class="num">149,000 km</td>
+            <td class="num">8,278</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tuusula</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15749750" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="155" data-mileage="76753" data-year="2006" data-price="7900" data-kmyr="3838" data-dom="0">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,900 €</td>
+            <td class="num">76,753 km</td>
+            <td class="num">3,838</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15755995" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="155" data-mileage="116000" data-year="2005" data-price="7900" data-kmyr="5524" data-dom="10">
+            <td>2005</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,900 €</td>
+            <td class="num">116,000 km</td>
+            <td class="num">5,524</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Hatchback</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15756413" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="143" data-mileage="128000" data-year="2008" data-price="7990" data-kmyr="7111" data-dom="3">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,990 € <span class="badge-up">↑ 150 €</span></td>
+            <td class="num">128,000 km</td>
+            <td class="num">7,111</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15768442" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="194" data-mileage="145000" data-year="2008" data-price="8380" data-kmyr="8056" data-dom="14">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">8,380 € <span class="badge-down">↓ 150 €</span></td>
+            <td class="num">145,000 km</td>
+            <td class="num">8,056</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15621992" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="155" data-mileage="78000" data-year="2006" data-price="8390" data-kmyr="3900" data-dom="7">
+            <td>2006</td>
+            <td>Toyota Corolla</td>
+            <td class="num">8,390 €</td>
+            <td class="num">78,000 km</td>
+            <td class="num">3,900</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Hatchback</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15761993" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="118" data-mileage="148000" data-year="2008" data-price="8890" data-kmyr="8222" data-dom="14">
+            <td>2008</td>
+            <td>Toyota Avensis</td>
+            <td class="num">8,890 €</td>
+            <td class="num">148,000 km</td>
+            <td class="num">8,222</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15715950" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="142000" data-year="2012" data-price="8900" data-kmyr="10143" data-dom="14">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">8,900 €</td>
+            <td class="num">142,000 km</td>
+            <td class="num">10,143</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15731937" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="186" data-mileage="132000" data-year="2008" data-price="8900" data-kmyr="7333" data-dom="14">
+            <td>2008</td>
+            <td>Toyota Avensis</td>
+            <td class="num">8,900 €</td>
+            <td class="num">132,000 km</td>
+            <td class="num">7,333</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15695336" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="173803" data-year="2013" data-price="9500" data-kmyr="13369" data-dom="12">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,500 €</td>
+            <td class="num">173,803 km</td>
+            <td class="num">13,369</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Sedan</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15750573" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="142" data-mileage="189000" data-year="2012" data-price="9790" data-kmyr="13500" data-dom="14">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,790 €</td>
+            <td class="num">189,000 km</td>
+            <td class="num">13,500</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15692067" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="155" data-mileage="114000" data-year="2008" data-price="9800" data-kmyr="6333" data-dom="2">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,800 €</td>
+            <td class="num">114,000 km</td>
+            <td class="num">6,333</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15682177" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="194" data-mileage="157000" data-year="2005" data-price="9900" data-kmyr="7476" data-dom="5">
+            <td>2005</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,900 €</td>
+            <td class="num">157,000 km</td>
+            <td class="num">7,476</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15705128" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="132" data-mileage="99800" data-year="2010" data-price="9900" data-kmyr="6238" data-dom="2">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,900 €</td>
+            <td class="num">99,800 km</td>
+            <td class="num">6,238</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Valkeakoski</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15750784" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="194" data-mileage="117000" data-year="2007" data-price="9900" data-kmyr="6158" data-dom="4">
+            <td>2007</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,900 €</td>
+            <td class="num">117,000 km</td>
+            <td class="num">6,158</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15757488" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="84" data-mileage="150000" data-year="2011" data-price="9990" data-kmyr="10000" data-dom="4">
             <td>2011</td>
             <td>Toyota Corolla</td>
             <td class="num">9,990 €</td>
             <td class="num">150,000 km</td>
+            <td class="num">10,000</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
             <td>Forssa</td>
-            <td class="num">4d</td>
+            <td class="num dom-fresh">4d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15748321" target="_blank">View →</a></td>
         </tr>
-        <tr>
+        <tr class="active" data-dist="151" data-mileage="47000" data-year="2005" data-price="10390" data-kmyr="2238" data-dom="2">
+            <td>2005</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,390 €</td>
+            <td class="num">47,000 km</td>
+            <td class="num">2,238</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15771312" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="194" data-mileage="87700" data-year="2009" data-price="10490" data-kmyr="5159" data-dom="10">
+            <td>2009</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,490 €</td>
+            <td class="num">87,700 km</td>
+            <td class="num">5,159</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15756647" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="151" data-mileage="97000" data-year="2011" data-price="10690" data-kmyr="6467" data-dom="9">
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,690 €</td>
+            <td class="num">97,000 km</td>
+            <td class="num">6,467</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15721575" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="132" data-mileage="88000" data-year="2008" data-price="10900" data-kmyr="4889" data-dom="14">
+            <td>2008</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,900 €</td>
+            <td class="num">88,000 km</td>
+            <td class="num">4,889</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Valkeakoski</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15435535" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="143" data-mileage="175000" data-year="2013" data-price="10900" data-kmyr="13462" data-dom="14">
+            <td>2013</td>
+            <td>Toyota Avensis</td>
+            <td class="num">10,900 €</td>
+            <td class="num">175,000 km</td>
+            <td class="num">13,462</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15689599" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="142" data-mileage="136000" data-year="2012" data-price="10990" data-kmyr="9714" data-dom="2">
             <td>2012</td>
             <td>Toyota Corolla</td>
-            <td class="num">11,480 €</td>
-            <td class="num">192,000 km</td>
+            <td class="num">10,990 € <span class="badge-down">↓ 500 €</span></td>
+            <td class="num">136,000 km</td>
+            <td class="num">9,714</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15680886" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="134" data-mileage="100000" data-year="2010" data-price="10990" data-kmyr="6250" data-dom="4">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,990 €</td>
+            <td class="num">100,000 km</td>
+            <td class="num">6,250</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15758731" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="134" data-mileage="135000" data-year="2011" data-price="11200" data-kmyr="9000" data-dom="11">
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,200 € <span class="badge-down">↓ 690 €</span></td>
+            <td class="num">135,000 km</td>
+            <td class="num">9,000</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15716691" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="143" data-mileage="161000" data-year="2013" data-price="11390" data-kmyr="12385" data-dom="14">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,390 € <span class="badge-down">↓ 200 €</span></td>
+            <td class="num">161,000 km</td>
+            <td class="num">12,385</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15647482" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="7" data-mileage="192000" data-year="2012" data-price="11480" data-kmyr="13714" data-dom="14">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,480 € <span class="badge-down">↓ 200 €</span></td>
+            <td class="num">192,000 km</td>
+            <td class="num">13,714</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
             <td>Raisio</td>
-            <td class="num">13d</td>
+            <td class="num dom-aging">14d</td>
             <td><a href="https://www.nettiauto.com/toyota/corolla/15684610" target="_blank">View →</a></td>
         </tr>
-        <tr>
-            <td>2015</td>
-            <td>Toyota Avensis</td>
-            <td class="num">11,990 €</td>
-            <td class="num">196,720 km</td>
+        <tr class="active" data-dist="113" data-mileage="141000" data-year="2012" data-price="11500" data-kmyr="10071" data-dom="14">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,500 € <span class="badge-down">↓ 400 €</span></td>
+            <td class="num">141,000 km</td>
+            <td class="num">10,071</td>
             <td>1600cc</td>
             <td>Bensiini</td>
+            <td>–</td>
+            <td>Nummela</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15723588" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="125" data-mileage="122000" data-year="2010" data-price="11790" data-kmyr="7625" data-dom="14">
+            <td>2010</td>
+            <td>Toyota Avensis</td>
+            <td class="num">11,790 € <span class="badge-down">↓ 660 €</span></td>
+            <td class="num">122,000 km</td>
+            <td class="num">7,625</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15714404" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="91" data-mileage="196720" data-year="2015" data-price="11890" data-kmyr="17884" data-dom="14">
+            <td>2015</td>
+            <td>Toyota Avensis</td>
+            <td class="num">11,890 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">196,720 km</td>
+            <td class="num">17,884</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
             <td>Raasepori</td>
-            <td class="num">13d</td>
+            <td class="num dom-aging">14d</td>
             <td><a href="https://www.nettiauto.com/toyota/avensis/15612377" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="178000" data-year="2011" data-price="11900" data-kmyr="11867" data-dom="7">
+            <td>2011</td>
+            <td>Toyota Avensis</td>
+            <td class="num">11,900 €</td>
+            <td class="num">178,000 km</td>
+            <td class="num">11,867</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15762201" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="194" data-mileage="157000" data-year="2016" data-price="11990" data-kmyr="15700" data-dom="4">
+            <td>2016</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,990 €</td>
+            <td class="num">157,000 km</td>
+            <td class="num">15,700</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15767906" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="125" data-mileage="158000" data-year="2012" data-price="12740" data-kmyr="11286" data-dom="14">
+            <td>2012</td>
+            <td>Toyota Avensis</td>
+            <td class="num">12,740 € <span class="badge-down">↓ 30 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">11,286</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15732261" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="175000" data-year="2014" data-price="12900" data-kmyr="14583" data-dom="14">
+            <td>2014</td>
+            <td>Toyota Avensis</td>
+            <td class="num">12,900 €</td>
+            <td class="num">175,000 km</td>
+            <td class="num">14,583</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15633788" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="118" data-mileage="184000" data-year="2015" data-price="12980" data-kmyr="16727" data-dom="14">
+            <td>2015</td>
+            <td>Toyota Corolla</td>
+            <td class="num">12,980 €</td>
+            <td class="num">184,000 km</td>
+            <td class="num">16,727</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15528763" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="143" data-mileage="75000" data-year="2011" data-price="12990" data-kmyr="5000" data-dom="0">
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">12,990 €</td>
+            <td class="num">75,000 km</td>
+            <td class="num">5,000</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15776634" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="134" data-mileage="102000" data-year="2010" data-price="13200" data-kmyr="6375" data-dom="10">
+            <td>2010</td>
+            <td>Toyota Avensis</td>
+            <td class="num">13,200 € <span class="badge-down">↓ 80 €</span></td>
+            <td class="num">102,000 km</td>
+            <td class="num">6,375</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15680348" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="154" data-mileage="191000" data-year="2017" data-price="13290" data-kmyr="21222" data-dom="9">
+            <td>2017</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,290 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">191,000 km</td>
+            <td class="num">21,222</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15644176" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="156" data-mileage="74000" data-year="2013" data-price="13450" data-kmyr="5692" data-dom="10">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,450 € <span class="badge-down">↓ 450 €</span></td>
+            <td class="num">74,000 km</td>
+            <td class="num">5,692</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Kerava</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15679274" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="0" data-mileage="119000" data-year="2010" data-price="13690" data-kmyr="7438" data-dom="14">
+            <td>2010</td>
+            <td>Toyota Avensis</td>
+            <td class="num">13,690 € <span class="badge-down">↓ 80 €</span></td>
+            <td class="num">119,000 km</td>
+            <td class="num">7,438</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Turku</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15727440" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="118" data-mileage="28000" data-year="2015" data-price="13800" data-kmyr="2545" data-dom="2">
+            <td>2015</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,800 €</td>
+            <td class="num">28,000 km</td>
+            <td class="num">2,545</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15745263" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="142" data-mileage="191500" data-year="2019" data-price="13800" data-kmyr="27357" data-dom="14">
+            <td>2019</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,800 €</td>
+            <td class="num">191,500 km</td>
+            <td class="num">27,357</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15747508" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-dist="0" data-mileage="158000" data-year="2013" data-price="13800" data-kmyr="12154" data-dom="11">
+            <td>2013</td>
+            <td>Toyota Avensis</td>
+            <td class="num">13,800 € <span class="badge-up">↑ 10 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">12,154</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Farmari</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15718613" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="194" data-mileage="195000" data-year="2016" data-price="13890" data-kmyr="19500" data-dom="14">
+            <td>2016</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,890 € <span class="badge-down">↓ 10 €</span></td>
+            <td class="num">195,000 km</td>
+            <td class="num">19,500</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15746652" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="142" data-mileage="120000" data-year="2014" data-price="14490" data-kmyr="10000" data-dom="3">
+            <td>2014</td>
+            <td>Toyota Corolla</td>
+            <td class="num">14,490 €</td>
+            <td class="num">120,000 km</td>
+            <td class="num">10,000</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15769097" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="154" data-mileage="117600" data-year="2014" data-price="14890" data-kmyr="9800" data-dom="14">
+            <td>2014</td>
+            <td>Toyota Corolla</td>
+            <td class="num">14,890 €</td>
+            <td class="num">117,600 km</td>
+            <td class="num">9,800</td>
+            <td>1500cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15243318" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-dist="84" data-mileage="126000" data-year="2013" data-price="14950" data-kmyr="9692" data-dom="14">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">14,950 €</td>
+            <td class="num">126,000 km</td>
+            <td class="num">9,692</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>Huittinen</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15643641" target="_blank">View →</a></td>
         </tr></tbody>
 </table>
 
@@ -123,15 +1046,12 @@
   <div class="chart-box">
     <canvas id="activity"></canvas>
   </div>
-  <div class="chart-box wide" style="display:block" id="historyBox">
-    <canvas id="history"></canvas>
-  </div>
 </div>
 
 <script>
 const scatter = new Chart(document.getElementById('scatter'), {
   type: 'scatter',
-  data: { datasets: [{"label": "Toyota Corolla", "data": [{"x": 142000, "y": 6990, "label": "2008 Toyota Corolla \u2014 Turku"}, {"x": 168000, "y": 6990, "label": "2009 Toyota Corolla \u2014 Salo"}, {"x": 95177, "y": 6999, "label": "2005 Toyota Corolla \u2014 Kokem\u00e4ki"}, {"x": 150000, "y": 9990, "label": "2011 Toyota Corolla \u2014 Forssa"}, {"x": 192000, "y": 11480, "label": "2012 Toyota Corolla \u2014 Raisio"}], "backgroundColor": "#3b82f6", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Avensis", "data": [{"x": 163000, "y": 6990, "label": "2006 Toyota Avensis \u2014 Raisio"}, {"x": 196720, "y": 11990, "label": "2015 Toyota Avensis \u2014 Raasepori"}], "backgroundColor": "#f59e0b", "pointRadius": 7, "pointHoverRadius": 9}] },
+  data: { datasets: [{"label": "Toyota Corolla", "data": [{"x": 175000, "y": 5850, "label": "2006 Toyota Corolla \u2014 Kangasala"}, {"x": 185000, "y": 5880, "label": "2007 Toyota Corolla \u2014 Helsinki"}, {"x": 178000, "y": 5880, "label": "2006 Toyota Corolla \u2014 Helsinki"}, {"x": 145000, "y": 5900, "label": "2006 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 155000, "y": 5900, "label": "2007 Toyota Corolla \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 100000, "y": 5950, "label": "2006 Toyota Corolla \u2014 Nokia"}, {"x": 148000, "y": 5980, "label": "2005 Toyota Corolla \u2014 Tuusula"}, {"x": 191000, "y": 5990, "label": "2007 Toyota Corolla \u2014 Kangasala"}, {"x": 185000, "y": 6250, "label": "2007 Toyota Corolla \u2014 Kangasala"}, {"x": 191000, "y": 6390, "label": "2007 Toyota Corolla \u2014 Kangasala"}, {"x": 153000, "y": 6390, "label": "2006 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 182000, "y": 6490, "label": "2006 Toyota Corolla \u2014 Vantaa"}, {"x": 118000, "y": 6590, "label": "2006 Toyota Corolla \u2014 Espoo"}, {"x": 187000, "y": 6680, "label": "2007 Toyota Corolla \u2014 Tampere"}, {"x": 122000, "y": 6900, "label": "2006 Toyota Corolla \u2014 Porvoo"}, {"x": 164500, "y": 6950, "label": "2012 Toyota Corolla \u2014 Sastamala"}, {"x": 189000, "y": 6990, "label": "2006 Toyota Corolla \u2014 Yl\u00f6j\u00e4rvi"}, {"x": 142000, "y": 6990, "label": "2008 Toyota Corolla \u2014 Turku"}, {"x": 168000, "y": 6990, "label": "2009 Toyota Corolla \u2014 Salo"}, {"x": 129000, "y": 6990, "label": "2007 Toyota Corolla \u2014 Raisio"}, {"x": 95177, "y": 6999, "label": "2005 Toyota Corolla \u2014 Kokem\u00e4ki"}, {"x": 191000, "y": 7200, "label": "2010 Toyota Corolla \u2014 Helsinki"}, {"x": 174000, "y": 7600, "label": "2009 Toyota Corolla \u2014 Espoo"}, {"x": 194000, "y": 7600, "label": "2009 Toyota Corolla \u2014 Tampere"}, {"x": 199000, "y": 7690, "label": "2006 Toyota Corolla \u2014 Lahti"}, {"x": 170000, "y": 7900, "label": "2008 Toyota Corolla \u2014 Yl\u00f6j\u00e4rvi"}, {"x": 149000, "y": 7900, "label": "2008 Toyota Corolla \u2014 Tuusula"}, {"x": 76753, "y": 7900, "label": "2006 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 116000, "y": 7900, "label": "2005 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 128000, "y": 7990, "label": "2008 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 145000, "y": 8380, "label": "2008 Toyota Corolla \u2014 Lahti"}, {"x": 78000, "y": 8390, "label": "2006 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 142000, "y": 8900, "label": "2012 Toyota Corolla \u2014 Vantaa"}, {"x": 173803, "y": 9500, "label": "2013 Toyota Corolla \u2014 Vantaa"}, {"x": 189000, "y": 9790, "label": "2012 Toyota Corolla \u2014 Tampere"}, {"x": 114000, "y": 9800, "label": "2008 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 157000, "y": 9900, "label": "2005 Toyota Corolla \u2014 Lahti"}, {"x": 99800, "y": 9900, "label": "2010 Toyota Corolla \u2014 Valkeakoski"}, {"x": 117000, "y": 9900, "label": "2007 Toyota Corolla \u2014 Lahti"}, {"x": 150000, "y": 9990, "label": "2011 Toyota Corolla \u2014 Forssa"}, {"x": 47000, "y": 10390, "label": "2005 Toyota Corolla \u2014 Helsinki"}, {"x": 87700, "y": 10490, "label": "2009 Toyota Corolla \u2014 Lahti"}, {"x": 97000, "y": 10690, "label": "2011 Toyota Corolla \u2014 Helsinki"}, {"x": 88000, "y": 10900, "label": "2008 Toyota Corolla \u2014 Valkeakoski"}, {"x": 136000, "y": 10990, "label": "2012 Toyota Corolla \u2014 Tampere"}, {"x": 100000, "y": 10990, "label": "2010 Toyota Corolla \u2014 H\u00e4meenlinna"}, {"x": 135000, "y": 11200, "label": "2011 Toyota Corolla \u2014 Espoo"}, {"x": 161000, "y": 11390, "label": "2013 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 192000, "y": 11480, "label": "2012 Toyota Corolla \u2014 Raisio"}, {"x": 141000, "y": 11500, "label": "2012 Toyota Corolla \u2014 Nummela"}, {"x": 157000, "y": 11990, "label": "2016 Toyota Corolla \u2014 Lahti"}, {"x": 184000, "y": 12980, "label": "2015 Toyota Corolla \u2014 Pori"}, {"x": 75000, "y": 12990, "label": "2011 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 191000, "y": 13290, "label": "2017 Toyota Corolla \u2014 Vantaa"}, {"x": 74000, "y": 13450, "label": "2013 Toyota Corolla \u2014 Kerava"}, {"x": 28000, "y": 13800, "label": "2015 Toyota Corolla \u2014 Pori"}, {"x": 191500, "y": 13800, "label": "2019 Toyota Corolla \u2014 Tampere"}, {"x": 195000, "y": 13890, "label": "2016 Toyota Corolla \u2014 Lahti"}, {"x": 120000, "y": 14490, "label": "2014 Toyota Corolla \u2014 Tampere"}, {"x": 117600, "y": 14890, "label": "2014 Toyota Corolla \u2014 Vantaa"}, {"x": 126000, "y": 14950, "label": "2013 Toyota Corolla \u2014 Huittinen"}], "backgroundColor": "#3b82f6", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Avensis", "data": [{"x": 174000, "y": 6200, "label": "2008 Toyota Avensis \u2014 Helsinki"}, {"x": 163000, "y": 6990, "label": "2006 Toyota Avensis \u2014 Raisio"}, {"x": 148000, "y": 8890, "label": "2008 Toyota Avensis \u2014 Pori"}, {"x": 132000, "y": 8900, "label": "2008 Toyota Avensis \u2014 Porvoo"}, {"x": 175000, "y": 10900, "label": "2013 Toyota Avensis \u2014 Hyvink\u00e4\u00e4"}, {"x": 122000, "y": 11790, "label": "2010 Toyota Avensis \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 196720, "y": 11890, "label": "2015 Toyota Avensis \u2014 Raasepori"}, {"x": 178000, "y": 11900, "label": "2011 Toyota Avensis \u2014 Vantaa"}, {"x": 158000, "y": 12740, "label": "2012 Toyota Avensis \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 175000, "y": 12900, "label": "2014 Toyota Avensis \u2014 Vantaa"}, {"x": 102000, "y": 13200, "label": "2010 Toyota Avensis \u2014 H\u00e4meenlinna"}, {"x": 119000, "y": 13690, "label": "2010 Toyota Avensis \u2014 Turku"}, {"x": 158000, "y": 13800, "label": "2013 Toyota Avensis \u2014 Turku"}], "backgroundColor": "#f59e0b", "pointRadius": 7, "pointHoverRadius": 9}] },
   options: {
     plugins: {
       title: { display: true, text: 'Price vs Mileage' },
@@ -147,8 +1067,8 @@ const scatter = new Chart(document.getElementById('scatter'), {
 const activity = new Chart(document.getElementById('activity'), {
   type: 'bar',
   data: {
-    labels: ["2026-05-16", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23", "2026-05-24", "2026-05-25", "2026-05-26", "2026-05-27", "2026-05-28", "2026-05-29"],
-    datasets: [{ label: 'New listings', data: [1592, 23, 6, 52, 58, 76, 74, 70, 62, 39, 54, 63, 75, 77, 66], backgroundColor: '#3b82f6' }]
+    labels: ["2026-05-16", "2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23", "2026-05-24", "2026-05-25", "2026-05-26", "2026-05-27", "2026-05-28", "2026-05-29", "2026-05-30"],
+    datasets: [{ label: 'New listings', data: [1592, 23, 6, 52, 58, 76, 74, 70, 62, 39, 54, 63, 75, 77, 66, 64], backgroundColor: '#3b82f6' }]
   },
   options: {
     plugins: { title: { display: true, text: 'New Listings per Scrape Run' } },
@@ -157,18 +1077,57 @@ const activity = new Chart(document.getElementById('activity'), {
 });
 
 
-const history = new Chart(document.getElementById('history'), {
-  type: 'line',
-  data: { datasets: [{"label": "2012 Toyota Corolla (15684610)", "data": [{"x": "2026-05-16", "y": 11680}, {"x": "2026-05-26", "y": 11480}], "borderColor": "#3b82f6", "backgroundColor": "transparent", "tension": 0.3}] },
-  options: {
-    plugins: { title: { display: true, text: 'Price History' } },
-    scales: {
-      x: { type: 'category', title: { display: true, text: 'Date' } },
-      y: { title: { display: true, text: 'Price (€)' } }
-    }
-  }
+let hideSold = false;
+function toggleHideSold() {
+    hideSold = !hideSold;
+    const btn = document.getElementById('hideSoldBtn');
+    btn.textContent = hideSold ? 'Show sold' : 'Hide sold';
+    btn.classList.toggle('active', hideSold);
+    applyFilters();
+}
+function applyFilters() {
+    const maxDist    = parseInt(document.getElementById('distSlider').value);
+    const maxMileage = parseInt(document.getElementById('mileageSlider').value);
+    document.querySelectorAll('tbody tr').forEach(tr => {
+        const dist    = tr.dataset.dist;
+        const mileage = tr.dataset.mileage;
+        const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
+        const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
+        const soldOk    = !hideSold || tr.classList.contains('active');
+        tr.style.display = (distOk && mileageOk && soldOk) ? '' : 'none';
+    });
+}
+
+let sortCol = null, sortDir = 'desc';
+document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.sort;
+        sortDir = (sortCol === col && sortDir === 'desc') ? 'asc' : 'desc';
+        sortCol = col;
+        document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(sortDir === 'desc' ? 'sort-desc' : 'sort-asc');
+        const tbody = document.querySelector('tbody');
+        Array.from(tbody.querySelectorAll('tr'))
+            .sort((a, b) => {
+                const av = parseFloat(a.dataset[col]);
+                const bv = parseFloat(b.dataset[col]);
+                const an = isNaN(av), bn = isNaN(bv);
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return sortDir === 'desc' ? bv - av : av - bv;
+            })
+            .forEach(row => tbody.appendChild(row));
+    });
 });
 
+const slider = document.getElementById('distSlider');
+const distVal = document.getElementById('distVal');
+slider.addEventListener('input', () => { distVal.textContent = parseInt(slider.value).toLocaleString(); applyFilters(); });
+
+const mileageSlider = document.getElementById('mileageSlider');
+const mileageVal = document.getElementById('mileageVal');
+mileageSlider.addEventListener('input', () => { mileageVal.textContent = parseInt(mileageSlider.value).toLocaleString(); applyFilters(); });
 </script>
 </body>
 </html>
