@@ -142,6 +142,11 @@ def generate_html(conn, output_path="report.html"):
         (s.get("max_mileage", 0) for s in searches_data.get("searches", [])),
         default=200000,
     )
+    min_year_slider = min(
+        (s["min_year"] for s in searches_data.get("searches", []) if s.get("min_year")),
+        default=2005,
+    )
+    max_year_slider = date.today().year
     origin_lat = origin_lon = None
     if origin_city:
         row = conn.execute(
@@ -328,6 +333,8 @@ def generate_html(conn, output_path="report.html"):
   <input type="range" id="distSlider" min="10" max="{max_slider_km}" step="10" value="{max_slider_km}">
   <label for="mileageSlider" style="margin-left:1.5rem">Max mileage: <strong id="mileageVal">{max_mileage_km:,}</strong> km</label>
   <input type="range" id="mileageSlider" min="10000" max="{max_mileage_km}" step="5000" value="{max_mileage_km}">
+  <label for="yearSlider" style="margin-left:1.5rem">Min year: <strong id="yearVal">{min_year_slider}</strong></label>
+  <input type="range" id="yearSlider" min="{min_year_slider}" max="{max_year_slider}" step="1" value="{min_year_slider}">
   <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
 </div>
 <table>
@@ -388,13 +395,16 @@ function toggleHideSold() {{
 function applyFilters() {{
     const maxDist    = parseInt(document.getElementById('distSlider').value);
     const maxMileage = parseInt(document.getElementById('mileageSlider').value);
+    const minYear    = parseInt(document.getElementById('yearSlider').value);
     document.querySelectorAll('tbody tr').forEach(tr => {{
         const dist    = tr.dataset.dist;
         const mileage = tr.dataset.mileage;
+        const year    = tr.dataset.year;
         const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
         const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
+        const yearOk    = year === ''    || parseInt(year)      >= minYear;
         const soldOk    = !hideSold || tr.classList.contains('active');
-        tr.style.display = (distOk && mileageOk && soldOk) ? '' : 'none';
+        tr.style.display = (distOk && mileageOk && yearOk && soldOk) ? '' : 'none';
     }});
 }}
 
@@ -428,6 +438,10 @@ slider.addEventListener('input', () => {{ distVal.textContent = parseInt(slider.
 const mileageSlider = document.getElementById('mileageSlider');
 const mileageVal = document.getElementById('mileageVal');
 mileageSlider.addEventListener('input', () => {{ mileageVal.textContent = parseInt(mileageSlider.value).toLocaleString(); applyFilters(); }});
+
+const yearSlider = document.getElementById('yearSlider');
+const yearVal = document.getElementById('yearVal');
+yearSlider.addEventListener('input', () => {{ yearVal.textContent = yearSlider.value; applyFilters(); }});
 </script>
 </body>
 </html>"""

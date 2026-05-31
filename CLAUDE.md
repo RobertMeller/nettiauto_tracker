@@ -33,6 +33,11 @@ C:\Users\Robert\.local\bin\uv.exe pip install -r requirements.txt
 
 There are no automated tests.
 
+## TODO
+
+- [x] Add year range filter/slider to the HTML report (similar to the mileage and distance sliders)
+- [ ] Add Kia Ceed, Volkswagen Passat and Skoda Octavia
+
 ## Architecture
 
 The project has two entry points and one config file:
