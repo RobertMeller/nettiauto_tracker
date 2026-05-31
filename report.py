@@ -201,6 +201,12 @@ def generate_html(conn, output_path="report.html"):
                 "label": f"{row['year']} {row['make'].title()} {row['model'].title()} — {row['location']}",
             })
 
+    model_labels = list(scatter_datasets.keys())
+    model_toggle_buttons = "".join(
+        f'<button class="btn-toggle active" data-model="{label}" onclick="toggleModel(this)">{label}</button>'
+        for label in model_labels
+    )
+
     colors = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"]
     scatter_chart_datasets = [
         {
@@ -251,7 +257,7 @@ def generate_html(conn, output_path="report.html"):
                     if r["year"] and r["mileage"] and r["year"] < current_year else None
         km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
         table_rows += f"""
-        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}">
+        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -337,6 +343,10 @@ def generate_html(conn, output_path="report.html"):
   <input type="range" id="yearSlider" min="{min_year_slider}" max="{max_year_slider}" step="1" value="{min_year_slider}">
   <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
 </div>
+<div class="filter-bar">
+  <span style="font-size:0.875rem;color:#334155;font-weight:600;white-space:nowrap">Models:</span>
+  {model_toggle_buttons}
+</div>
 <table>
   <thead><tr>
     <th class="sortable" data-sort="year">Year</th><th>Model</th><th class="sortable" data-sort="price">Price</th><th class="sortable" data-sort="mileage">Mileage</th><th class="sortable" data-sort="kmyr">km/yr</th>
@@ -384,6 +394,19 @@ const activity = new Chart(document.getElementById('activity'), {{
 }});
 
 
+const enabledModels = new Set({json.dumps(model_labels)});
+function toggleModel(btn) {{
+    const label = btn.dataset.model;
+    if (enabledModels.has(label)) {{
+        enabledModels.delete(label);
+        btn.classList.remove('active');
+    }} else {{
+        enabledModels.add(label);
+        btn.classList.add('active');
+    }}
+    applyFilters();
+}}
+
 let hideSold = false;
 function toggleHideSold() {{
     hideSold = !hideSold;
@@ -403,8 +426,9 @@ function applyFilters() {{
         const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
         const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
         const yearOk    = year === ''    || parseInt(year)      >= minYear;
+        const modelOk   = enabledModels.has(tr.dataset.label);
         const soldOk    = !hideSold || tr.classList.contains('active');
-        tr.style.display = (distOk && mileageOk && yearOk && soldOk) ? '' : 'none';
+        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk) ? '' : 'none';
     }});
 }}
 
