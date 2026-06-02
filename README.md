@@ -1,7 +1,9 @@
 # Nettiauto.com Car Tracker
 
-Scrapes nettiauto.com for Toyota Corolla & Avensis listings matching your criteria
-and stores a full price/availability history in a local SQLite database.
+Scrapes nettiauto.com for car listings matching your criteria and stores a full
+price/availability history in a local SQLite database.
+
+**Live report:** https://robertmeller.github.io/nettiauto_tracker/
 
 ---
 
