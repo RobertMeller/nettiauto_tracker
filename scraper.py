@@ -89,6 +89,7 @@ class Listing:
     fuel_type: Optional[str] = None
     transmission: Optional[str] = None
     body_type: Optional[str] = None
+    has_tow_hitch: Optional[bool] = None
 
 # ─────────────────────────────────────────────
 # DATABASE
@@ -110,6 +111,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
             fuel_type       TEXT,
             transmission    TEXT,
             body_type       TEXT,
+            has_tow_hitch   INTEGER,
             location        TEXT,
             url             TEXT,
             date_first_seen TEXT,
@@ -163,6 +165,11 @@ def init_db(db_path: str) -> sqlite3.Connection:
             lon         REAL
         )
     """)
+    # Schema migrations for existing databases
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(listings)")}
+    if "has_tow_hitch" not in existing_cols:
+        conn.execute("ALTER TABLE listings ADD COLUMN has_tow_hitch INTEGER")
+
     conn.commit()
     return conn
 
@@ -180,13 +187,14 @@ def upsert_listing(conn: sqlite3.Connection, listing: Listing) -> dict:
         conn.execute("""
             INSERT INTO listings
               (listing_id, make, model, year, mileage, price, engine_cc,
-               fuel_type, transmission, body_type, location, url,
+               fuel_type, transmission, body_type, has_tow_hitch, location, url,
                date_first_seen, date_last_seen)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             listing.listing_id, listing.make, listing.model,
             listing.year, listing.mileage, listing.price, listing.engine_cc,
             listing.fuel_type, listing.transmission, listing.body_type,
+            listing.has_tow_hitch,
             listing.location, listing.url,
             today, today,
         ))
@@ -215,12 +223,14 @@ def upsert_listing(conn: sqlite3.Connection, listing: Listing) -> dict:
                 engine_cc=COALESCE(?, engine_cc),
                 fuel_type=COALESCE(?, fuel_type),
                 transmission=COALESCE(?, transmission),
-                body_type=COALESCE(?, body_type)
+                body_type=COALESCE(?, body_type),
+                has_tow_hitch=COALESCE(?, has_tow_hitch)
             WHERE listing_id=?
         """, (
             today, listing.price, listing.mileage, listing.location,
             listing.engine_cc, listing.fuel_type,
             listing.transmission, listing.body_type,
+            listing.has_tow_hitch,
             listing.listing_id,
         ))
 
@@ -375,6 +385,9 @@ def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
         # --- Body type from card text ---
         body_type = _parse_body_type(text_content)
 
+        # --- Tow hitch from card feature badges ---
+        has_tow_hitch = True if "vetokoukku" in text_content.lower() else False
+
         today = date.today().isoformat()
         return Listing(
             listing_id=listing_id,
@@ -391,6 +404,7 @@ def parse_search_result_card(card, make: str, model: str) -> Optional[Listing]:
             fuel_type=fuel_type,
             transmission=transmission,
             body_type=body_type,
+            has_tow_hitch=has_tow_hitch,
         )
     except Exception as e:
         log.debug(f"  Card parse error: {e}")
@@ -428,6 +442,10 @@ def enrich_from_listing_page(listing: Listing) -> Listing:
     # Body type
     if not listing.body_type:
         listing.body_type = _parse_body_type(text)
+
+    # Tow hitch (detail page has the full feature list)
+    if "vetokoukku" in text.lower():
+        listing.has_tow_hitch = True
 
     # Location (more reliable on detail page)
     if not listing.location:
@@ -618,6 +636,9 @@ def apply_filters(conn: sqlite3.Connection):
         if "min_year" in s:
             conditions.append("(year IS NULL OR year >= ?)")
             values.append(s["min_year"])
+
+        if s.get("tow_hitch"):
+            conditions.append("(has_tow_hitch IS NULL OR has_tow_hitch = 1)")
 
         exclude_fuels = s.get("exclude_fuel_type", [])
         if exclude_fuels:
