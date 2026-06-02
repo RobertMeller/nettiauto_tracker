@@ -9,27 +9,30 @@ price/availability history in a local SQLite database.
 
 ## Search Criteria (pre-configured)
 
-| Filter              | Value           |
-|---------------------|-----------------|
-| Make                | Toyota          |
-| Models              | Corolla, Avensis |
-| Max mileage         | 200 000 km      |
-| Price range         | 5 000–12 000 €  |
-| Tow hitch (Vetokoukku) | Kyllä (Yes)  |
-| Air conditioning    | Kyllä (Yes)     |
-| Max engine size     | < 1 800 cc      |
+| Filter              | Value                                                        |
+|---------------------|--------------------------------------------------------------|
+| Makes / Models      | Toyota Corolla, Toyota Avensis, Kia Ceed, VW Passat, Skoda Octavia |
+| Max mileage         | 200 000 km                                                   |
+| Price range         | 5 000–15 000 €                                               |
+| Tow hitch (Vetokoukku) | Kyllä (Yes)                                               |
+| Air conditioning    | Kyllä (Yes)                                                  |
+| Max engine size     | < 1 800 cc                                                   |
+| Fuel type           | No diesel                                                    |
+| Min year            | 2005                                                         |
+| Origin city         | Turku                                                        |
+| Max distance        | 200 km                                                       |
 
 ---
 
 ## Setup
 
-### 1. Install Python 3.10+
-Download from https://python.org if needed.
+### 1. Install Python 3.10+ and uv
+Download Python from https://python.org if needed. Install [uv](https://github.com/astral-sh/uv) as the package manager.
 
 ### 2. Install dependencies
-```bash
-cd nettiauto_tracker
-pip install -r requirements.txt
+```powershell
+uv venv
+uv pip install -r requirements.txt
 ```
 
 ---
@@ -37,39 +40,42 @@ pip install -r requirements.txt
 ## Usage
 
 ### Run the scraper (fetch new data)
-```bash
-python scraper.py
+```powershell
+uv run python scraper.py
 ```
 First run populates the database.  
 Subsequent runs update `date_last_seen` and record any price changes.
 
 ### View all tracked listings
-```bash
-python report.py
+```powershell
+uv run python report.py
 ```
 
 ### View only new listings seen today
-```bash
-python report.py --new
+```powershell
+uv run python report.py --new
+```
+
+### View listings matching searches.toml filters
+```powershell
+uv run python report.py --filtered
+```
+
+### Generate the HTML report
+```powershell
+uv run python report.py --html
 ```
 
 ### Export everything to CSV
-```bash
-python report.py --export
+```powershell
+uv run python report.py --export
 ```
 
 ### View price history for a specific listing
-```bash
-python report.py --history 15521636
+```powershell
+uv run python report.py --history 15521636
 ```
 (replace `15521636` with the actual listing ID)
-
-### Sort by a different column
-```bash
-python report.py --sort year
-python report.py --sort mileage
-python report.py --sort date_first_seen
-```
 
 ---
 
@@ -94,31 +100,10 @@ Add this line to run at 08:00 every morning:
    - Start in: `C:\path\to\nettiauto_tracker`
 
 ### GitHub Actions (free cloud schedule, no computer needed)
-Create `.github/workflows/scrape.yml`:
-```yaml
-name: Nettiauto Scraper
-on:
-  schedule:
-    - cron: '0 7 * * *'   # 07:00 UTC daily
-  workflow_dispatch:        # also allow manual trigger
-
-jobs:
-  scrape:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
-      - run: pip install -r requirements.txt
-      - run: python scraper.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: database
-          path: nettiauto_listings.db
-```
-Note: GitHub Actions doesn't persist the SQLite file between runs unless you
-commit it back or use a cloud database. For persistent history, run locally
-or on a VPS.
+Already configured in `.github/workflows/scrape.yml`. Runs daily at 06:00 UTC,
+scrapes listings, generates `docs/index.html`, and commits the updated database
+and report back to the repo. The live report is published via GitHub Pages at
+https://robertmeller.github.io/nettiauto_tracker/.
 
 ---
 
@@ -128,8 +113,8 @@ or on a VPS.
 | Column          | Type    | Description                        |
 |-----------------|---------|------------------------------------|
 | listing_id      | INTEGER | Unique ID from the URL             |
-| make            | TEXT    | toyota                             |
-| model           | TEXT    | corolla / avensis                  |
+| make            | TEXT    | toyota / kia / volkswagen / skoda  |
+| model           | TEXT    | corolla / avensis / ceed / passat / octavia |
 | year            | INTEGER | Registration year                  |
 | mileage         | INTEGER | km                                 |
 | price           | INTEGER | EUR                                |
@@ -156,24 +141,22 @@ or on a VPS.
 
 ## Adjusting search criteria
 
-Edit `SEARCH_CONFIGS` in `scraper.py`:
+Edit `searches.toml` — add a new `[[searches]]` block for each make/model you want to track:
 
-```python
-SEARCH_CONFIGS = [
-    {
-        "make": "toyota",
-        "model": "corolla",
-        "params": {
-            "MittarilukemaMax": 200000,   # max mileage km
-            "HintaMin": 5000,             # min price EUR
-            "HintaMax": 12000,            # max price EUR
-            "Vetokoukku": 1,              # tow hitch: 1=yes
-            "Ilmastointi": 1,             # A/C: 1=yes
-            "MoottoritilavuusMax": 1800,  # max engine cc
-        }
-    },
-    # add more makes/models here...
-]
+```toml
+[[searches]]
+make = "toyota"
+model = "corolla"
+min_price = 5000        # EUR
+max_price = 15000       # EUR
+max_mileage = 200000    # km
+tow_hitch = true
+ac = true
+max_engine_cc = 1800
+exclude_fuel_type = ["Diesel"]
+min_year = 2005
+origin_city = "Turku"
+max_distance_km = 200
 ```
 
 ---
