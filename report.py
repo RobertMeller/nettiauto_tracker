@@ -125,6 +125,11 @@ def generate_html(conn, output_path="report.html"):
     ).fetchall()
 
     latest_run_date = runs[-1]["run_date"][:10] if runs else today
+    if latest_run_date:
+        _lrd = datetime.strptime(latest_run_date, "%Y-%m-%d")
+        latest_run_display = f"{_lrd.day} {_lrd.strftime('%b')} {_lrd.year}"
+    else:
+        latest_run_display = "–"
 
     # Origin city and per-listing distances for the distance slider
     searches_file = Path(__file__).parent / "searches.toml"
@@ -219,10 +224,6 @@ def generate_html(conn, output_path="report.html"):
         for i, (label, points) in enumerate(scatter_datasets.items())
     ]
 
-    # Activity bar chart
-    activity_labels = [r["run_date"][:10] for r in runs]
-    activity_data = [r["listings_new"] for r in runs]
-
     # Table rows HTML
     def dom_days(first, last):
         try:
@@ -314,6 +315,8 @@ def generate_html(conn, output_path="report.html"):
   .stat {{ background: white; border-radius: 8px; padding: 0.75rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 0.2rem; min-width: 130px; }}
   .stat-label {{ font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }}
   .stat-val {{ font-size: 1.1rem; font-weight: 600; color: #1e293b; font-variant-numeric: tabular-nums; }}
+  .stat-last-run {{ border-left: 3px solid #3b82f6; margin-left: auto; }}
+  .stat-last-run .stat-val {{ font-size: 1.25rem; color: #1d4ed8; }}
   .dom-fresh {{ color: #16a34a; font-weight: 600; }}
   .dom-aging {{ color: #d97706; font-weight: 600; }}
   .dom-stale {{ color: #dc2626; font-weight: 600; }}
@@ -333,6 +336,7 @@ def generate_html(conn, output_path="report.html"):
   <div class="stat"><span class="stat-label">Median price</span><span class="stat-val">{f"{stat_med_price:,} €" if stat_med_price else "–"}</span></div>
   <div class="stat"><span class="stat-label">Avg mileage</span><span class="stat-val">{f"{stat_avg_mileage:,} km" if stat_avg_mileage else "–"}</span></div>
   <div class="stat"><span class="stat-label">Median mileage</span><span class="stat-val">{f"{stat_med_mileage:,} km" if stat_med_mileage else "–"}</span></div>
+  <div class="stat stat-last-run"><span class="stat-label">Last run</span><span class="stat-val">{latest_run_display}</span></div>
 </div>
 <div class="filter-bar">
   <label for="distSlider">Max distance from {origin_city or "origin"}: <strong id="distVal">{max_slider_km}</strong> km</label>
@@ -357,11 +361,8 @@ def generate_html(conn, output_path="report.html"):
 
 <h2>Charts</h2>
 <div class="charts">
-  <div class="chart-box">
+  <div class="chart-box wide">
     <canvas id="scatter"></canvas>
-  </div>
-  <div class="chart-box">
-    <canvas id="activity"></canvas>
   </div>
 </div>
 
@@ -380,19 +381,6 @@ const scatter = new Chart(document.getElementById('scatter'), {{
     }}
   }}
 }});
-
-const activity = new Chart(document.getElementById('activity'), {{
-  type: 'bar',
-  data: {{
-    labels: {json.dumps(activity_labels)},
-    datasets: [{{ label: 'New listings', data: {json.dumps(activity_data)}, backgroundColor: '#3b82f6' }}]
-  }},
-  options: {{
-    plugins: {{ title: {{ display: true, text: 'New Listings per Scrape Run' }} }},
-    scales: {{ y: {{ beginAtZero: true }} }}
-  }}
-}});
-
 
 const enabledModels = new Set({json.dumps(model_labels)});
 function toggleModel(btn) {{
