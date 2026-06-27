@@ -240,6 +240,7 @@ def generate_html(conn, output_path="report.html"):
                     "dom-aging" if days is not None and days < 30 else "dom-stale"
         engine = f"{r['engine_cc']}cc" if r["engine_cc"] else "–"
         fuel = r["fuel_type"] or "–"
+        transmission = r["transmission"] or "–"
         is_active = r["date_last_seen"] == latest_run_date
         row_class = "active" if is_active else "inactive"
         first_price = first_prices.get(r["listing_id"])
@@ -266,6 +267,7 @@ def generate_html(conn, output_path="report.html"):
             <td class="num">{km_yr}</td>
             <td>{engine}</td>
             <td>{fuel}</td>
+            <td>{transmission}</td>
             <td>{r['body_type'] or '–'}</td>
             <td>{r['location'] or '–'}</td>
             <td class="num {dom_class}">{dom_str}</td>
@@ -354,7 +356,7 @@ def generate_html(conn, output_path="report.html"):
 <table>
   <thead><tr>
     <th class="sortable" data-sort="year">Year</th><th>Model</th><th class="sortable" data-sort="price">Price</th><th class="sortable" data-sort="mileage">Mileage</th><th class="sortable" data-sort="kmyr">km/yr</th>
-    <th>Engine</th><th>Fuel</th><th>Body</th><th>Location</th><th class="sortable" data-sort="dom">On market</th><th>Link</th>
+    <th>Engine</th><th>Fuel</th><th>Transmission</th><th>Body</th><th>Location</th><th class="sortable" data-sort="dom">On market</th><th>Link</th>
   </tr></thead>
   <tbody>{table_rows}</tbody>
 </table>
