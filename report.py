@@ -394,6 +394,8 @@ function toggleModel(btn) {{
         enabledModels.add(label);
         btn.classList.add('active');
     }}
+    scatter.data.datasets.forEach(ds => {{ ds.hidden = !enabledModels.has(ds.label); }});
+    scatter.update();
     applyFilters();
 }}
 
