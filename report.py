@@ -225,6 +225,19 @@ def generate_html(conn, output_path="report.html"):
     ]
 
     # Table rows HTML
+    # Pareto frontier — not dominated on all of price, mileage, and year simultaneously
+    _pc = [
+        (r["listing_id"], r["price"], r["mileage"], r["year"])
+        for r in filtered if r["price"] and r["mileage"] and r["year"]
+    ]
+    pareto_ids = set()
+    for i, (lid, price, mileage, year) in enumerate(_pc):
+        if not any(
+            pj <= price and mj <= mileage and yj >= year and (pj < price or mj < mileage or yj > year)
+            for j, (_, pj, mj, yj) in enumerate(_pc) if j != i
+        ):
+            pareto_ids.add(lid)
+
     def dom_days(first, last):
         try:
             return (datetime.fromisoformat(last) - datetime.fromisoformat(first)).days
@@ -242,7 +255,8 @@ def generate_html(conn, output_path="report.html"):
         fuel = r["fuel_type"] or "–"
         transmission = r["transmission"] or "–"
         is_active = r["date_last_seen"] == latest_run_date
-        row_class = "active" if is_active else "inactive"
+        is_pareto = r["listing_id"] in pareto_ids
+        row_class = ("active" if is_active else "inactive") + (" pareto-row" if is_pareto else "")
         first_price = first_prices.get(r["listing_id"])
         price_badge = ""
         if first_price and r["price"] and first_price != r["price"]:
@@ -258,10 +272,11 @@ def generate_html(conn, output_path="report.html"):
         km_yr_raw = round(r['mileage'] / (current_year - r['year'])) \
                     if r["year"] and r["mileage"] and r["year"] < current_year else None
         km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
+        pareto_badge = ' <span class="badge-pareto">★</span>' if is_pareto else ""
         table_rows += f"""
-        <tr class="{row_class}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}">
+        <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}">
             <td>{r['year'] or '–'}</td>
-            <td>{(r['make'] or '').title()} {(r['model'] or '').title()}</td>
+            <td>{(r['make'] or '').title()} {(r['model'] or '').title()}{pareto_badge}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
             <td class="num">{f"{r['mileage']:,}" if r['mileage'] else '–'} km</td>
             <td class="num">{km_yr}</td>
@@ -322,6 +337,9 @@ def generate_html(conn, output_path="report.html"):
   .dom-fresh {{ color: #16a34a; font-weight: 600; }}
   .dom-aging {{ color: #d97706; font-weight: 600; }}
   .dom-stale {{ color: #dc2626; font-weight: 600; }}
+  .badge-pareto {{ color: #d97706; font-size: 0.85rem; margin-left: 0.3rem; }}
+  tr.pareto-row.active td {{ background: #fffbeb; }}
+  tr.pareto-row.active:hover td {{ background: #fef3c7; }}
   th.sortable {{ cursor: pointer; user-select: none; }}
   th.sortable:hover {{ background: #2d3f55; }}
   th.sort-desc::after {{ content: ' ↓'; opacity: 0.8; }}
@@ -348,6 +366,7 @@ def generate_html(conn, output_path="report.html"):
   <label for="yearSlider" style="margin-left:1.5rem">Min year: <strong id="yearVal">{min_year_slider}</strong></label>
   <input type="range" id="yearSlider" min="{min_year_slider}" max="{max_year_slider}" step="1" value="{min_year_slider}">
   <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
+  <button class="btn-toggle" id="paretoBtn" onclick="toggleParetoOnly()">Best value only</button>
 </div>
 <div class="filter-bar">
   <span style="font-size:0.875rem;color:#334155;font-weight:600;white-space:nowrap">Models:</span>
@@ -407,6 +426,12 @@ function toggleHideSold() {{
     btn.classList.toggle('active', hideSold);
     applyFilters();
 }}
+let paretoOnly = false;
+function toggleParetoOnly() {{
+    paretoOnly = !paretoOnly;
+    document.getElementById('paretoBtn').classList.toggle('active', paretoOnly);
+    applyFilters();
+}}
 function applyFilters() {{
     const maxDist    = parseInt(document.getElementById('distSlider').value);
     const maxMileage = parseInt(document.getElementById('mileageSlider').value);
@@ -419,8 +444,9 @@ function applyFilters() {{
         const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
         const yearOk    = year === ''    || parseInt(year)      >= minYear;
         const modelOk   = enabledModels.has(tr.dataset.label);
-        const soldOk    = !hideSold || tr.classList.contains('active');
-        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk) ? '' : 'none';
+        const soldOk    = !hideSold  || tr.classList.contains('active');
+        const paretoOk  = !paretoOnly || tr.dataset.pareto === '1';
+        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk) ? '' : 'none';
     }});
 }}
 
