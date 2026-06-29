@@ -248,7 +248,7 @@ def generate_html(conn, output_path="report.html"):
         for label in model_labels
     )
 
-    colors = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"]
+    colors = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"]
     scatter_chart_datasets = [
         {
             "label": label,
