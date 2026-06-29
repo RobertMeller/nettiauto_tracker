@@ -247,6 +247,10 @@ def generate_html(conn, output_path="report.html"):
         f'<button class="btn-toggle active" data-model="{label}" onclick="toggleModel(this)">{label}</button>'
         for label in model_labels
     )
+    model_toggle_buttons_small = "".join(
+        f'<button class="btn-toggle btn-toggle-sm active" data-model="{label}" onclick="toggleModel(this)">{label}</button>'
+        for label in model_labels
+    )
 
     colors = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"]
     scatter_chart_datasets = [
@@ -429,6 +433,8 @@ def generate_html(conn, output_path="report.html"):
   .deal-good {{ color: #16a34a; font-weight: 600; }}
   .deal-bad  {{ color: #dc2626; font-weight: 600; }}
   .filter-bar select {{ font-size: 0.875rem; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0.3rem 0.5rem; background: white; cursor: pointer; }}
+  .btn-toggle-sm {{ margin-left: 0 !important; padding: 0.2rem 0.6rem; font-size: 0.75rem; }}
+  .model-bar-sm {{ display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }}
 </style>
 </head>
 <body>
@@ -474,6 +480,7 @@ def generate_html(conn, output_path="report.html"):
 </table>
 
 <h2>Charts <button class="btn-toggle" id="trendBtn" onclick="toggleTrendLines()" style="margin-left:1rem;font-size:0.75rem;vertical-align:middle">Hide trend lines</button></h2>
+<div class="model-bar-sm">{model_toggle_buttons_small}</div>
 <div class="charts">
   <div class="chart-box wide">
     <canvas id="scatter"></canvas>
@@ -519,8 +526,14 @@ function updateChartVisibility() {{
 }}
 function toggleModel(btn) {{
     const label = btn.dataset.model;
-    if (enabledModels.has(label)) {{ enabledModels.delete(label); btn.classList.remove('active'); }}
-    else {{ enabledModels.add(label); btn.classList.add('active'); }}
+    const allBtns = document.querySelectorAll('[data-model="' + label + '"]');
+    if (enabledModels.has(label)) {{
+        enabledModels.delete(label);
+        allBtns.forEach(b => b.classList.remove('active'));
+    }} else {{
+        enabledModels.add(label);
+        allBtns.forEach(b => b.classList.add('active'));
+    }}
     updateChartVisibility();
     scatter.update();
     applyFilters();
