@@ -281,32 +281,40 @@ def generate_html(conn, output_path="report.html"):
             return None
 
     current_year = date.today().year
-    _reg_data = [
-        (r["mileage"], current_year - r["year"], r["price"])
-        for r in filtered
-        if r["price"] and r["mileage"] and r["year"] and r["year"] < current_year
-    ]
-    reg_coeffs = _ols(_reg_data)
-    if reg_coeffs and _reg_data:
-        _reg_mileages = sorted(d[0] for d in _reg_data)
-        _reg_ages     = sorted(d[1] for d in _reg_data)
-        _median_age   = _reg_ages[len(_reg_ages) // 2]
-        m_min, m_max  = _reg_mileages[0], _reg_mileages[-1]
-        _reg_line_pts = [
-            {"x": m_min, "y": round(reg_coeffs[0] + reg_coeffs[1] * m_min + reg_coeffs[2] * _median_age)},
-            {"x": m_max, "y": round(reg_coeffs[0] + reg_coeffs[1] * m_max + reg_coeffs[2] * _median_age)},
+    reg_coeffs_by_model = {}
+    for label in scatter_datasets:
+        _model_data = [
+            (r["mileage"], current_year - r["year"], r["price"])
+            for r in filtered
+            if r["search_label"] == label and r["price"] and r["mileage"] and r["year"] and r["year"] < current_year
         ]
-        reg_line_js = (
-            "scatter.data.datasets.push({"
-            "type:'line',"
-            f"label:'Market price (≈{_median_age} yr old)',"
-            f"data:{json.dumps(_reg_line_pts)},"
-            "borderColor:'#94a3b8',borderWidth:2,borderDash:[6,4],pointRadius:0,fill:false"
-            "});scatter.update();"
+        _c = _ols(_model_data)
+        if _c:
+            reg_coeffs_by_model[label] = _c
+    reg_line_datasets = []
+    for i, label in enumerate(scatter_datasets):
+        _c = reg_coeffs_by_model.get(label)
+        if not _c or not scatter_datasets[label]:
+            continue
+        _mileages = [p["x"] for p in scatter_datasets[label]]
+        _ages = sorted(
+            current_year - r["year"]
+            for r in filtered
+            if r["search_label"] == label and r["year"] and r["year"] < current_year
         )
-    else:
-        reg_coeffs = None
-        reg_line_js = ""
+        if not _ages:
+            continue
+        _med = _ages[len(_ages) // 2]
+        m_min, m_max = min(_mileages), max(_mileages)
+        reg_line_datasets.append({
+            "label": f"{label} trend",
+            "modelLabel": label,
+            "data": [
+                {"x": m_min, "y": round(_c[0] + _c[1] * m_min + _c[2] * _med)},
+                {"x": m_max, "y": round(_c[0] + _c[1] * m_max + _c[2] * _med)},
+            ],
+            "color": colors[i % len(colors)],
+        })
     table_rows = ""
     for r in filtered:
         days = dom_days(r["date_first_seen"], r["date_last_seen"])
@@ -318,8 +326,9 @@ def generate_html(conn, output_path="report.html"):
         transmission = r["transmission"] or "–"
         _t = (r["transmission"] or "").lower()
         trans_norm = "auto" if _t.startswith("auto") else "manual" if _t.startswith("manu") else ""
-        if reg_coeffs and r["price"] and r["mileage"] and r["year"] and r["year"] < current_year:
-            predicted = reg_coeffs[0] + reg_coeffs[1] * r["mileage"] + reg_coeffs[2] * (current_year - r["year"])
+        _coeffs = reg_coeffs_by_model.get(r["search_label"])
+        if _coeffs and r["price"] and r["mileage"] and r["year"] and r["year"] < current_year:
+            predicted = _coeffs[0] + _coeffs[1] * r["mileage"] + _coeffs[2] * (current_year - r["year"])
             deal = round(r["price"] - predicted)
             deal_val = str(deal)
             deal_str = f'−{abs(deal):,} €' if deal < 0 else f'+{deal:,} €'
@@ -456,7 +465,7 @@ def generate_html(conn, output_path="report.html"):
   <tbody>{table_rows}</tbody>
 </table>
 
-<h2>Charts</h2>
+<h2>Charts <button class="btn-toggle" id="trendBtn" onclick="toggleTrendLines()" style="margin-left:1rem;font-size:0.75rem;vertical-align:middle">Hide trend lines</button></h2>
 <div class="charts">
   <div class="chart-box wide">
     <canvas id="scatter"></canvas>
@@ -478,21 +487,43 @@ const scatter = new Chart(document.getElementById('scatter'), {{
     }}
   }}
 }});
-{reg_line_js}
+const regLineData = {json.dumps(reg_line_datasets)};
+const regLineModelMap = Object.fromEntries(regLineData.map(d => [d.label, d.modelLabel]));
+regLineData.forEach(d => {{
+    scatter.data.datasets.push({{
+        type: 'line', label: d.label, data: d.data,
+        borderColor: d.color, borderWidth: 1.5, borderDash: [6, 4],
+        pointRadius: 0, fill: false,
+    }});
+}});
+scatter.update();
 
 const enabledModels = new Set({json.dumps(model_labels)});
+let showTrendLines = true;
+function updateChartVisibility() {{
+    scatter.data.datasets.forEach(ds => {{
+        if (ds.type === 'line') {{
+            ds.hidden = !showTrendLines || !enabledModels.has(regLineModelMap[ds.label]);
+        }} else {{
+            ds.hidden = !enabledModels.has(ds.label);
+        }}
+    }});
+}}
 function toggleModel(btn) {{
     const label = btn.dataset.model;
-    if (enabledModels.has(label)) {{
-        enabledModels.delete(label);
-        btn.classList.remove('active');
-    }} else {{
-        enabledModels.add(label);
-        btn.classList.add('active');
-    }}
-    scatter.data.datasets.forEach(ds => {{ if (ds.type !== 'line') ds.hidden = !enabledModels.has(ds.label); }});
+    if (enabledModels.has(label)) {{ enabledModels.delete(label); btn.classList.remove('active'); }}
+    else {{ enabledModels.add(label); btn.classList.add('active'); }}
+    updateChartVisibility();
     scatter.update();
     applyFilters();
+}}
+function toggleTrendLines() {{
+    showTrendLines = !showTrendLines;
+    const btn = document.getElementById('trendBtn');
+    btn.textContent = showTrendLines ? 'Hide trend lines' : 'Show trend lines';
+    btn.classList.toggle('active', !showTrendLines);
+    updateChartVisibility();
+    scatter.update();
 }}
 
 let hideSold = false;
