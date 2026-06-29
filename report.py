@@ -254,6 +254,8 @@ def generate_html(conn, output_path="report.html"):
         engine = f"{r['engine_cc']}cc" if r["engine_cc"] else "–"
         fuel = r["fuel_type"] or "–"
         transmission = r["transmission"] or "–"
+        _t = (r["transmission"] or "").lower()
+        trans_norm = "auto" if _t.startswith("auto") else "manual" if _t.startswith("manu") else ""
         is_active = r["date_last_seen"] == latest_run_date
         is_pareto = r["listing_id"] in pareto_ids
         row_class = ("active" if is_active else "inactive") + (" pareto-row" if is_pareto else "")
@@ -274,7 +276,7 @@ def generate_html(conn, output_path="report.html"):
         km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
         pareto_badge = ' <span class="badge-pareto">★</span>' if is_pareto else ""
         table_rows += f"""
-        <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}">
+        <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}" data-transmission="{trans_norm}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}{pareto_badge}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -367,6 +369,7 @@ def generate_html(conn, output_path="report.html"):
   <input type="range" id="yearSlider" min="{min_year_slider}" max="{max_year_slider}" step="1" value="{min_year_slider}">
   <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
   <button class="btn-toggle" id="paretoBtn" onclick="toggleParetoOnly()">Best value only</button>
+  <button class="btn-toggle" id="transBtn" onclick="toggleTrans()">All transmissions</button>
 </div>
 <div class="filter-bar">
   <span style="font-size:0.875rem;color:#334155;font-weight:600;white-space:nowrap">Models:</span>
@@ -432,6 +435,15 @@ function toggleParetoOnly() {{
     document.getElementById('paretoBtn').classList.toggle('active', paretoOnly);
     applyFilters();
 }}
+let transFilter = 0;
+const transLabels = ['All transmissions', 'Automatic only', 'Manual only'];
+function toggleTrans() {{
+    transFilter = (transFilter + 1) % 3;
+    const btn = document.getElementById('transBtn');
+    btn.textContent = transLabels[transFilter];
+    btn.classList.toggle('active', transFilter !== 0);
+    applyFilters();
+}}
 function applyFilters() {{
     const maxDist    = parseInt(document.getElementById('distSlider').value);
     const maxMileage = parseInt(document.getElementById('mileageSlider').value);
@@ -446,7 +458,8 @@ function applyFilters() {{
         const modelOk   = enabledModels.has(tr.dataset.label);
         const soldOk    = !hideSold  || tr.classList.contains('active');
         const paretoOk  = !paretoOnly || tr.dataset.pareto === '1';
-        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk) ? '' : 'none';
+        const transOk   = transFilter === 0 || (transFilter === 1 && tr.dataset.transmission === 'auto') || (transFilter === 2 && tr.dataset.transmission === 'manual');
+        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk && transOk) ? '' : 'none';
     }});
 }}
 
