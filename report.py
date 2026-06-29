@@ -355,7 +355,7 @@ def generate_html(conn, output_path="report.html"):
         km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
         pareto_badge = ' <span class="badge-pareto">★</span>' if is_pareto else ""
         table_rows += f"""
-        <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}" data-transmission="{trans_norm}" data-deal="{deal_val}">
+        <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}" data-transmission="{trans_norm}" data-deal="{deal_val}" data-firstseen="{r['date_first_seen'] or ''}">
             <td>{r['year'] or '–'}</td>
             <td>{(r['make'] or '').title()} {(r['model'] or '').title()}{pareto_badge}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
@@ -428,6 +428,7 @@ def generate_html(conn, output_path="report.html"):
   th.sort-asc::after  {{ content: ' ↑'; opacity: 0.8; }}
   .deal-good {{ color: #16a34a; font-weight: 600; }}
   .deal-bad  {{ color: #dc2626; font-weight: 600; }}
+  .filter-bar select {{ font-size: 0.875rem; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0.3rem 0.5rem; background: white; cursor: pointer; }}
 </style>
 </head>
 <body>
@@ -449,6 +450,13 @@ def generate_html(conn, output_path="report.html"):
   <input type="range" id="mileageSlider" min="10000" max="{max_mileage_km}" step="5000" value="{max_mileage_km}">
   <label for="yearSlider" style="margin-left:1.5rem">Min year: <strong id="yearVal">{min_year_slider}</strong></label>
   <input type="range" id="yearSlider" min="{min_year_slider}" max="{max_year_slider}" step="1" value="{min_year_slider}">
+  <label for="firstSeenFilter" style="margin-left:1.5rem">First seen:</label>
+  <select id="firstSeenFilter" onchange="applyFilters()">
+    <option value="0">All time</option>
+    <option value="5">Last 5 days</option>
+    <option value="10">Last 10 days</option>
+    <option value="20">Last 20 days</option>
+  </select>
   <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
   <button class="btn-toggle" id="paretoBtn" onclick="toggleParetoOnly()">Best value only</button>
   <button class="btn-toggle" id="transBtn" onclick="toggleTrans()">All transmissions</button>
@@ -550,21 +558,26 @@ function toggleTrans() {{
     applyFilters();
 }}
 function applyFilters() {{
-    const maxDist    = parseInt(document.getElementById('distSlider').value);
-    const maxMileage = parseInt(document.getElementById('mileageSlider').value);
-    const minYear    = parseInt(document.getElementById('yearSlider').value);
+    const maxDist      = parseInt(document.getElementById('distSlider').value);
+    const maxMileage   = parseInt(document.getElementById('mileageSlider').value);
+    const minYear      = parseInt(document.getElementById('yearSlider').value);
+    const firstSeenDays = parseInt(document.getElementById('firstSeenFilter').value);
+    const cutoffStr    = firstSeenDays > 0
+        ? new Date(Date.now() - firstSeenDays * 86400000).toISOString().slice(0, 10)
+        : '';
     document.querySelectorAll('tbody tr').forEach(tr => {{
         const dist    = tr.dataset.dist;
         const mileage = tr.dataset.mileage;
         const year    = tr.dataset.year;
-        const distOk    = dist === ''    || parseFloat(dist)    <= maxDist;
-        const mileageOk = mileage === '' || parseFloat(mileage) <= maxMileage;
-        const yearOk    = year === ''    || parseInt(year)      >= minYear;
-        const modelOk   = enabledModels.has(tr.dataset.label);
-        const soldOk    = !hideSold  || tr.classList.contains('active');
-        const paretoOk  = !paretoOnly || tr.dataset.pareto === '1';
-        const transOk   = transFilter === 0 || (transFilter === 1 && tr.dataset.transmission === 'auto') || (transFilter === 2 && tr.dataset.transmission === 'manual');
-        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk && transOk) ? '' : 'none';
+        const distOk      = dist === ''    || parseFloat(dist)    <= maxDist;
+        const mileageOk   = mileage === '' || parseFloat(mileage) <= maxMileage;
+        const yearOk      = year === ''    || parseInt(year)      >= minYear;
+        const modelOk     = enabledModels.has(tr.dataset.label);
+        const soldOk      = !hideSold  || tr.classList.contains('active');
+        const paretoOk    = !paretoOnly || tr.dataset.pareto === '1';
+        const transOk     = transFilter === 0 || (transFilter === 1 && tr.dataset.transmission === 'auto') || (transFilter === 2 && tr.dataset.transmission === 'manual');
+        const firstSeenOk = !cutoffStr || (tr.dataset.firstseen && tr.dataset.firstseen >= cutoffStr);
+        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk && transOk && firstSeenOk) ? '' : 'none';
     }});
 }}
 
