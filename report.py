@@ -388,7 +388,7 @@ def generate_html(conn, output_path="report.html"):
   h1 {{ font-size: 1.5rem; margin-bottom: 0.25rem; }}
   .meta {{ color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }}
   h2 {{ font-size: 1.1rem; margin: 2rem 0 0.75rem; color: #334155; }}
-  .table-scroll {{ max-height: 520px; overflow-y: auto; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
+  .table-scroll {{ max-height: 780px; overflow-y: auto; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }}
   table {{ width: 100%; border-collapse: collapse; background: white; }}
   th {{ position: sticky; top: 0; z-index: 1; background: #1e293b; color: white; text-align: center; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; border-right: 1px solid #334155; }}
   th:last-child {{ border-right: none; }}
