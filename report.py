@@ -456,7 +456,6 @@ def generate_html(conn, output_path="report.html"):
 <div class="filter-bar">
   <span style="font-size:0.875rem;color:#334155;font-weight:600;white-space:nowrap">Models:</span>
   {model_toggle_buttons}
-  <button class="btn-toggle" id="trendBtn" onclick="toggleTrendLines()">Hide trend lines</button>
 </div>
 <table>
   <thead><tr>
@@ -466,7 +465,7 @@ def generate_html(conn, output_path="report.html"):
   <tbody>{table_rows}</tbody>
 </table>
 
-<h2>Charts</h2>
+<h2>Charts <button class="btn-toggle" id="trendBtn" onclick="toggleTrendLines()" style="margin-left:1rem;font-size:0.75rem;vertical-align:middle">Hide trend lines</button></h2>
 <div class="charts">
   <div class="chart-box wide">
     <canvas id="scatter"></canvas>
