@@ -85,3 +85,17 @@ exclude_fuel_type = ["Diesel"]
 min_year = 2005
 origin_city = "Turku"
 max_distance_km = 200
+
+[[searches]]
+make = "toyota"
+model = "auris"
+min_price = 5000
+max_price = 15000
+max_mileage = 200000
+tow_hitch = true
+ac = true
+max_engine_cc = 1800
+exclude_fuel_type = ["Diesel"]
+min_year = 2005
+origin_city = "Turku"
+max_distance_km = 200

@@ -11,7 +11,7 @@ price/availability history in a local SQLite database.
 
 | Filter              | Value                                                        |
 |---------------------|--------------------------------------------------------------|
-| Makes / Models      | Toyota Corolla, Toyota Avensis, Kia Ceed, VW Passat, Skoda Octavia |
+| Makes / Models      | Toyota Corolla, Toyota Avensis, Toyota Yaris, Toyota Auris, Kia Ceed, VW Passat, Skoda Octavia |
 | Max mileage         | 200 000 km                                                   |
 | Price range         | 5 000–15 000 €                                               |
 | Tow hitch (Vetokoukku) | Kyllä (Yes)                                               |
