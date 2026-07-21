@@ -36,7 +36,8 @@ There are no automated tests.
 ## TODO
 
 - [x] Add year range filter/slider to the HTML report (similar to the mileage and distance sliders)
-- [ ] Add Kia Ceed, Volkswagen Passat and Skoda Octavia
+- [x] Add Kia Ceed, Volkswagen Passat and Skoda Octavia
+- [x] Add known model flaws reference (`known_issues.toml`) with an info button in the HTML report
 
 ## Architecture
 
