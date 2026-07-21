@@ -1,0 +1,2973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nettiauto Report — 2026-07-21</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; padding: 2rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .meta { color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; color: #334155; }
+  .table-scroll { max-height: 780px; overflow-y: auto; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  table { width: 100%; border-collapse: collapse; background: white; }
+  th { position: sticky; top: 0; z-index: 1; background: #1e293b; color: white; text-align: center; padding: 0.6rem 0.8rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .05em; border-right: 1px solid #334155; }
+  th:last-child { border-right: none; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; font-size: 0.875rem; }
+  td:last-child { border-right: none; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  td { text-align: center; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: #3b82f6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  .chart-box { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .chart-box.wide { grid-column: 1 / -1; }
+  canvas { max-height: 320px; }
+  tr.active td { background: #f0fdf4; }
+  tr.active:hover td { background: #dcfce7; }
+  tr.inactive td { color: #94a3b8; }
+  tr.inactive td a { color: #94a3b8; pointer-events: none; }
+  .badge-down { color: #16a34a; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }
+  .badge-up { color: #dc2626; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; }
+  .filter-bar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); flex-wrap: wrap; }
+  .filter-bar label { font-size: 0.875rem; color: #334155; white-space: nowrap; }
+  .filter-bar input[type=range] { width: 220px; accent-color: #3b82f6; }
+  .btn-toggle { margin-left: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-weight: 600; border: 1.5px solid #cbd5e1; border-radius: 6px; background: white; color: #334155; cursor: pointer; white-space: nowrap; }
+  .btn-toggle.active { background: #1e293b; color: white; border-color: #1e293b; }
+  .stats-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat { background: white; border-radius: 8px; padding: 0.75rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 0.2rem; min-width: 130px; }
+  .stat-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+  .stat-val { font-size: 1.1rem; font-weight: 600; color: #1e293b; font-variant-numeric: tabular-nums; }
+  .stat-last-run { border-left: 3px solid #3b82f6; margin-left: auto; }
+  .stat-last-run .stat-val { font-size: 1.25rem; color: #1d4ed8; }
+  .dom-fresh { color: #16a34a; font-weight: 600; }
+  .dom-aging { color: #d97706; font-weight: 600; }
+  .dom-stale { color: #dc2626; font-weight: 600; }
+  .badge-pareto { color: #d97706; font-size: 0.85rem; margin-left: 0.3rem; }
+  tr.pareto-row.active td { background: #fffbeb; }
+  tr.pareto-row.active:hover td { background: #fef3c7; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { background: #2d3f55; }
+  th.sort-desc::after { content: ' ↓'; opacity: 0.8; }
+  th.sort-asc::after  { content: ' ↑'; opacity: 0.8; }
+  .deal-good { color: #16a34a; font-weight: 600; }
+  .deal-bad  { color: #dc2626; font-weight: 600; }
+  .filter-bar select { font-size: 0.875rem; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0.3rem 0.5rem; background: white; cursor: pointer; }
+  .btn-toggle-sm { margin-left: 0 !important; padding: 0.2rem 0.6rem; font-size: 0.75rem; }
+  .model-bar-sm { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+  .info-btn { border: none; background: none; color: #64748b; cursor: pointer; font-size: 0.95rem; vertical-align: middle; padding: 0 0.2rem; line-height: 1; }
+  .info-btn:hover { color: #1d4ed8; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: white; border-radius: 10px; max-width: 560px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.25rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .modal-header h3 { font-size: 1.05rem; color: #1e293b; }
+  .modal-close { border: none; background: none; font-size: 1rem; cursor: pointer; color: #64748b; }
+  .modal-close:hover { color: #1e293b; }
+  .issue-item { padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }
+  .issue-item:last-child { border-bottom: none; }
+  .issue-title { font-weight: 600; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.25rem; }
+  .issue-desc { font-size: 0.825rem; color: #475569; line-height: 1.4; }
+  .issue-source { display: inline-block; margin-top: 0.4rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; padding: 0.15rem 0.5rem; border-radius: 999px; }
+  .source-recall { background: #fee2e2; color: #b91c1c; }
+  .source-forum { background: #dbeafe; color: #1d4ed8; }
+  .source-user { background: #f1f5f9; color: #475569; }
+  .source-general-knowledge { background: #f1f5f9; color: #475569; }
+</style>
+</head>
+<body>
+<h1>Nettiauto Tracker</h1>
+<p class="meta">Generated 2026-07-21 &nbsp;·&nbsp; 177 filtered listings</p>
+
+<h2>Matched Listings</h2>
+<div class="stats-bar">
+  <div class="stat"><span class="stat-label">Avg price</span><span class="stat-val">10,585 €</span></div>
+  <div class="stat"><span class="stat-label">Median price</span><span class="stat-val">10,690 €</span></div>
+  <div class="stat"><span class="stat-label">Avg mileage</span><span class="stat-val">148,208 km</span></div>
+  <div class="stat"><span class="stat-label">Median mileage</span><span class="stat-val">157,000 km</span></div>
+  <div class="stat stat-last-run"><span class="stat-label">Last run</span><span class="stat-val">29 Jun 2026</span></div>
+</div>
+<div class="filter-bar">
+  <label for="distSlider">Max distance from Turku: <strong id="distVal">200</strong> km</label>
+  <input type="range" id="distSlider" min="10" max="200" step="10" value="200">
+  <label for="mileageSlider" style="margin-left:1.5rem">Max mileage: <strong id="mileageVal">200,000</strong> km</label>
+  <input type="range" id="mileageSlider" min="10000" max="200000" step="5000" value="200000">
+  <label for="yearSlider" style="margin-left:1.5rem">Min year: <strong id="yearVal">2005</strong></label>
+  <input type="range" id="yearSlider" min="2005" max="2026" step="1" value="2005">
+  <label for="firstSeenFilter" style="margin-left:1.5rem">First seen:</label>
+  <select id="firstSeenFilter" onchange="applyFilters()">
+    <option value="0">All time</option>
+    <option value="5">Last 5 days</option>
+    <option value="10">Last 10 days</option>
+    <option value="20">Last 20 days</option>
+  </select>
+  <button class="btn-toggle" id="hideSoldBtn" onclick="toggleHideSold()">Hide sold</button>
+  <button class="btn-toggle" id="paretoBtn" onclick="toggleParetoOnly()">Best value only</button>
+  <button class="btn-toggle" id="transBtn" onclick="toggleTrans()">All transmissions</button>
+</div>
+<div class="filter-bar">
+  <span style="font-size:0.875rem;color:#334155;font-weight:600;white-space:nowrap">Models:</span>
+  <button class="btn-toggle active" data-model="Skoda Octavia" onclick="toggleModel(this)">Skoda Octavia</button><button class="btn-toggle active" data-model="Toyota Corolla" onclick="toggleModel(this)">Toyota Corolla</button><button class="btn-toggle active" data-model="Kia Ceed" onclick="toggleModel(this)">Kia Ceed</button><button class="btn-toggle active" data-model="Toyota Avensis" onclick="toggleModel(this)">Toyota Avensis</button><button class="btn-toggle active" data-model="Volkswagen Passat" onclick="toggleModel(this)">Volkswagen Passat</button><button class="btn-toggle active" data-model="Toyota Yaris" onclick="toggleModel(this)">Toyota Yaris</button>
+</div>
+<div class="table-scroll">
+<table>
+  <thead><tr>
+    <th class="sortable" data-sort="year">Year</th><th>Model</th><th class="sortable" data-sort="price">Price</th><th class="sortable" data-sort="mileage">Mileage</th><th class="sortable" data-sort="kmyr">km/yr</th><th class="sortable" data-sort="deal" title="Actual price minus model-predicted price. Negative (green) = cheaper than market expects.">vs market</th>
+    <th>Engine</th><th>Fuel</th><th>Transmission</th><th>Body</th><th>Location</th><th class="sortable" data-sort="dom">On market</th><th>Link</th>
+  </tr></thead>
+  <tbody>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="7" data-mileage="111000" data-year="2006" data-price="5450" data-kmyr="5550" data-dom="20" data-label="Skoda Octavia" data-transmission="manual" data-deal="-262" data-firstseen="2026-06-02">
+            <td>2006</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('skoda|octavia', 2006)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,450 € <span class="badge-down">↓ 500 €</span></td>
+            <td class="num">111,000 km</td>
+            <td class="num">5,550</td>
+            <td class="num deal-good">−262 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Raisio</td>
+            <td class="num dom-aging">20d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15716920" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="125" data-mileage="179000" data-year="2011" data-price="5490" data-kmyr="11933" data-dom="14" data-label="Skoda Octavia" data-transmission="manual" data-deal="-2186" data-firstseen="2026-06-02">
+            <td>2011</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('skoda|octavia', 2011)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,490 € <span class="badge-up">↑ 590 €</span></td>
+            <td class="num">179,000 km</td>
+            <td class="num">11,933</td>
+            <td class="num deal-good">−2,186 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15509996" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="178000" data-year="2006" data-price="5670" data-kmyr="8900" data-dom="43" data-label="Toyota Corolla" data-transmission="manual" data-deal="-701" data-firstseen="2026-05-16">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,670 € <span class="badge-down">↓ 210 €</span></td>
+            <td class="num">178,000 km</td>
+            <td class="num">8,900</td>
+            <td class="num deal-good">−701 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Hatchback</td>
+            <td>Helsinki</td>
+            <td class="num dom-stale">43d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15734969" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="194" data-mileage="183000" data-year="2006" data-price="5790" data-kmyr="9150" data-dom="6" data-label="Toyota Corolla" data-transmission="auto" data-deal="-490" data-firstseen="2026-06-02">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,790 €</td>
+            <td class="num">183,000 km</td>
+            <td class="num">9,150</td>
+            <td class="num deal-good">−490 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15783578" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="198000" data-year="2006" data-price="5800" data-kmyr="9900" data-dom="3" data-label="Toyota Corolla" data-transmission="manual" data-deal="-209" data-firstseen="2026-06-26">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,800 €</td>
+            <td class="num">198,000 km</td>
+            <td class="num">9,900</td>
+            <td class="num deal-good">−209 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15826804" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="183000" data-year="2006" data-price="5850" data-kmyr="9150" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="-430" data-firstseen="2026-06-27">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,850 €</td>
+            <td class="num">183,000 km</td>
+            <td class="num">9,150</td>
+            <td class="num deal-good">−430 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15827641" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="185000" data-year="2007" data-price="5880" data-kmyr="9737" data-dom="17" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1030" data-firstseen="2026-05-16">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,880 € <span class="badge-down">↓ 600 €</span></td>
+            <td class="num">185,000 km</td>
+            <td class="num">9,737</td>
+            <td class="num deal-good">−1,030 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">17d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15669517" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="145000" data-year="2006" data-price="5900" data-kmyr="7250" data-dom="12" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1069" data-firstseen="2026-05-16">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,900 €</td>
+            <td class="num">145,000 km</td>
+            <td class="num">7,250</td>
+            <td class="num deal-good">−1,069 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Farmari</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15701688" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="125" data-mileage="155000" data-year="2007" data-price="5900" data-kmyr="8158" data-dom="1" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1553" data-firstseen="2026-05-28">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,900 €</td>
+            <td class="num">155,000 km</td>
+            <td class="num">8,158</td>
+            <td class="num deal-good">−1,553 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15772342" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="151" data-mileage="119000" data-year="2011" data-price="5900" data-kmyr="7933" data-dom="0" data-label="Kia Ceed" data-transmission="auto" data-deal="-1491" data-firstseen="2026-06-02">
+            <td>2011</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2011)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,900 €</td>
+            <td class="num">119,000 km</td>
+            <td class="num">7,933</td>
+            <td class="num deal-good">−1,491 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15760681" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="132" data-mileage="100000" data-year="2006" data-price="5950" data-kmyr="5000" data-dom="7" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1834" data-firstseen="2026-05-19">
+            <td>2006</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,950 €</td>
+            <td class="num">100,000 km</td>
+            <td class="num">5,000</td>
+            <td class="num deal-good">−1,834 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Nokia</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15752224" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="149" data-mileage="191000" data-year="2007" data-price="5990" data-kmyr="10053" data-dom="5" data-label="Toyota Corolla" data-transmission="manual" data-deal="-811" data-firstseen="2026-05-21">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">5,990 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">10,053</td>
+            <td class="num deal-good">−811 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15757288" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="174000" data-year="2008" data-price="6200" data-kmyr="9667" data-dom="6" data-label="Toyota Avensis" data-transmission="manual" data-deal="-1035" data-firstseen="2026-05-25">
+            <td>2008</td>
+            <td>Toyota Avensis <button class="info-btn" onclick="showIssues('toyota|avensis', 2008)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,200 €</td>
+            <td class="num">174,000 km</td>
+            <td class="num">9,667</td>
+            <td class="num deal-good">−1,035 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15764482" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="158500" data-year="2010" data-price="6290" data-kmyr="9906" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1180" data-firstseen="2026-06-02">
+            <td>2010</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2010)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,290 € <span class="badge-down">↓ 410 €</span></td>
+            <td class="num">158,500 km</td>
+            <td class="num">9,906</td>
+            <td class="num deal-good">−1,180 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15766700" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="149" data-mileage="191000" data-year="2007" data-price="6390" data-kmyr="10053" data-dom="4" data-label="Toyota Corolla" data-transmission="manual" data-deal="-411" data-firstseen="2026-05-16">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,390 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">10,053</td>
+            <td class="num deal-good">−411 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Kangasala</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/14007744" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="153000" data-year="2006" data-price="6390" data-kmyr="7650" data-dom="6" data-label="Toyota Corolla" data-transmission="manual" data-deal="-434" data-firstseen="2026-05-22">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,390 €</td>
+            <td class="num">153,000 km</td>
+            <td class="num">7,650</td>
+            <td class="num deal-good">−434 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15761028" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="142" data-mileage="193000" data-year="2012" data-price="6700" data-kmyr="13786" data-dom="6" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1358" data-firstseen="2026-06-02">
+            <td>2012</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('skoda|octavia', 2012)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,700 €</td>
+            <td class="num">193,000 km</td>
+            <td class="num">13,786</td>
+            <td class="num deal-good">−1,358 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15734365" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="134" data-mileage="183000" data-year="2016" data-price="6890" data-kmyr="18300" data-dom="27" data-label="Kia Ceed" data-transmission="manual" data-deal="-2537" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,890 €</td>
+            <td class="num">183,000 km</td>
+            <td class="num">18,300</td>
+            <td class="num deal-good">−2,537 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15782409" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="186" data-mileage="122000" data-year="2006" data-price="6900" data-kmyr="6100" data-dom="11" data-label="Toyota Corolla" data-transmission="manual" data-deal="-485" data-firstseen="2026-05-16">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,900 €</td>
+            <td class="num">122,000 km</td>
+            <td class="num">6,100</td>
+            <td class="num deal-good">−485 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15642020" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="122000" data-year="2006" data-price="6900" data-kmyr="6100" data-dom="17" data-label="Toyota Corolla" data-transmission="manual" data-deal="-485" data-firstseen="2026-06-12">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,900 €</td>
+            <td class="num">122,000 km</td>
+            <td class="num">6,100</td>
+            <td class="num deal-good">−485 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">17d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15803321" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="193000" data-year="2015" data-price="6900" data-kmyr="17545" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-1783" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2015)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,900 €</td>
+            <td class="num">193,000 km</td>
+            <td class="num">17,545</td>
+            <td class="num deal-good">−1,783 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15710512" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="194" data-mileage="172000" data-year="2016" data-price="6900" data-kmyr="17200" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-2690" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,900 €</td>
+            <td class="num">172,000 km</td>
+            <td class="num">17,200</td>
+            <td class="num deal-good">−2,690 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15744488" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="38" data-mileage="183000" data-year="2012" data-price="6900" data-kmyr="13071" data-dom="7" data-label="Skoda Octavia" data-transmission="manual" data-deal="-1429" data-firstseen="2026-06-09">
+            <td>2012</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2012)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,900 €</td>
+            <td class="num">183,000 km</td>
+            <td class="num">13,071</td>
+            <td class="num deal-good">−1,429 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Pöytyä</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15795669" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="105" data-mileage="164500" data-year="2012" data-price="6950" data-kmyr="11750" data-dom="6" data-label="Toyota Corolla" data-transmission="manual" data-deal="-3658" data-firstseen="2026-05-16">
+            <td>2012</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span></td>
+            <td class="num">6,950 €</td>
+            <td class="num">164,500 km</td>
+            <td class="num">11,750</td>
+            <td class="num deal-good">−3,658 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Sastamala</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15721873" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="141" data-mileage="189000" data-year="2006" data-price="6990" data-kmyr="9450" data-dom="6" data-label="Toyota Corolla" data-transmission="auto" data-deal="818" data-firstseen="2026-05-16">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,990 €</td>
+            <td class="num">189,000 km</td>
+            <td class="num">9,450</td>
+            <td class="num deal-bad">+818 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Ylöjärvi</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15687846" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="142000" data-year="2008" data-price="6990" data-kmyr="7889" data-dom="5" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1364" data-firstseen="2026-05-18">
+            <td>2008</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2008)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,990 €</td>
+            <td class="num">142,000 km</td>
+            <td class="num">7,889</td>
+            <td class="num deal-good">−1,364 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15751681" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="7" data-mileage="129000" data-year="2007" data-price="6990" data-kmyr="6789" data-dom="1" data-label="Toyota Corolla" data-transmission="manual" data-deal="-934" data-firstseen="2026-05-30">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,990 €</td>
+            <td class="num">129,000 km</td>
+            <td class="num">6,789</td>
+            <td class="num deal-good">−934 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Farmari</td>
+            <td>Raisio</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15776990" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="7" data-mileage="163000" data-year="2006" data-price="6990" data-kmyr="8150" data-dom="17" data-label="Toyota Avensis" data-transmission="manual" data-deal="813" data-firstseen="2026-05-16">
+            <td>2006</td>
+            <td>Toyota Avensis <button class="info-btn" onclick="showIssues('toyota|avensis', 2006)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,990 €</td>
+            <td class="num">163,000 km</td>
+            <td class="num">8,150</td>
+            <td class="num deal-bad">+813 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Raisio</td>
+            <td class="num dom-aging">17d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15674074" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="7" data-mileage="117000" data-year="2010" data-price="6990" data-kmyr="7312" data-dom="7" data-label="Kia Ceed" data-transmission="auto" data-deal="166" data-firstseen="2026-06-02">
+            <td>2010</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2010)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,990 €</td>
+            <td class="num">117,000 km</td>
+            <td class="num">7,312</td>
+            <td class="num deal-bad">+166 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Kaarina</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15689859" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="89" data-mileage="95177" data-year="2005" data-price="6999" data-kmyr="4532" data-dom="4" data-label="Toyota Corolla" data-transmission="manual" data-deal="-207" data-firstseen="2026-05-16">
+            <td>2005</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|corolla', 2005)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">6,999 €</td>
+            <td class="num">95,177 km</td>
+            <td class="num">4,532</td>
+            <td class="num deal-good">−207 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Kokemäki</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15667876" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="134" data-mileage="147000" data-year="2012" data-price="7300" data-kmyr="10500" data-dom="8" data-label="Skoda Octavia" data-transmission="auto" data-deal="-2005" data-firstseen="2026-06-02">
+            <td>2012</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('skoda|octavia', 2012)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,300 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">147,000 km</td>
+            <td class="num">10,500</td>
+            <td class="num deal-good">−2,005 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15781619" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="155" data-mileage="192000" data-year="2010" data-price="7490" data-kmyr="12000" data-dom="2" data-label="Toyota Corolla" data-transmission="auto" data-deal="-1289" data-firstseen="2026-06-12">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,490 €</td>
+            <td class="num">192,000 km</td>
+            <td class="num">12,000</td>
+            <td class="num deal-good">−1,289 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15802186" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="132" data-mileage="169000" data-year="2013" data-price="7500" data-kmyr="13000" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1970" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,500 €</td>
+            <td class="num">169,000 km</td>
+            <td class="num">13,000</td>
+            <td class="num deal-good">−1,970 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Valkeakoski</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15280391" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="174000" data-year="2009" data-price="7600" data-kmyr="10235" data-dom="37" data-label="Toyota Corolla" data-transmission="manual" data-deal="-840" data-firstseen="2026-05-23">
+            <td>2009</td>
+            <td>Toyota Corolla</td>
+            <td class="num">7,600 €</td>
+            <td class="num">174,000 km</td>
+            <td class="num">10,235</td>
+            <td class="num deal-good">−840 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-stale">37d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15761475" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="194" data-mileage="199000" data-year="2006" data-price="7690" data-kmyr="9950" data-dom="31" data-label="Toyota Corolla" data-transmission="auto" data-deal="1699" data-firstseen="2026-05-29">
+            <td>2006</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,690 €</td>
+            <td class="num">199,000 km</td>
+            <td class="num">9,950</td>
+            <td class="num deal-bad">+1,699 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>Farmari</td>
+            <td>Lahti</td>
+            <td class="num dom-stale">31d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15773205" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="152" data-mileage="149000" data-year="2008" data-price="7900" data-kmyr="8278" data-dom="9" data-label="Toyota Corolla" data-transmission="manual" data-deal="-327" data-firstseen="2026-05-16">
+            <td>2008</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2008)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,900 €</td>
+            <td class="num">149,000 km</td>
+            <td class="num">8,278</td>
+            <td class="num deal-good">−327 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tuusula</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15749750" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="155" data-mileage="76753" data-year="2006" data-price="7900" data-kmyr="3838" data-dom="0" data-label="Toyota Corolla" data-transmission="manual" data-deal="-305" data-firstseen="2026-05-20">
+            <td>2006</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|corolla', 2006)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,900 €</td>
+            <td class="num">76,753 km</td>
+            <td class="num">3,838</td>
+            <td class="num deal-good">−305 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15755995" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="155" data-mileage="116000" data-year="2005" data-price="7900" data-kmyr="5524" data-dom="13" data-label="Toyota Corolla" data-transmission="manual" data-deal="1072" data-firstseen="2026-05-20">
+            <td>2005</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2005)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,900 €</td>
+            <td class="num">116,000 km</td>
+            <td class="num">5,524</td>
+            <td class="num deal-bad">+1,072 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Hatchback</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15756413" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="194" data-mileage="192000" data-year="2008" data-price="7900" data-kmyr="10667" data-dom="19" data-label="Toyota Corolla" data-transmission="auto" data-deal="452" data-firstseen="2026-06-10">
+            <td>2008</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2008)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,900 €</td>
+            <td class="num">192,000 km</td>
+            <td class="num">10,667</td>
+            <td class="num deal-bad">+452 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-aging">19d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15797318" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="142" data-mileage="114000" data-year="2014" data-price="7900" data-kmyr="9500" data-dom="8" data-label="Kia Ceed" data-transmission="manual" data-deal="-1353" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2014)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,900 €</td>
+            <td class="num">114,000 km</td>
+            <td class="num">9,500</td>
+            <td class="num deal-good">−1,353 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15722962" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="141" data-mileage="171000" data-year="2014" data-price="7980" data-kmyr="14250" data-dom="1" data-label="Skoda Octavia" data-transmission="manual" data-deal="-2197" data-firstseen="2026-06-12">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">7,980 €</td>
+            <td class="num">171,000 km</td>
+            <td class="num">14,250</td>
+            <td class="num deal-good">−2,197 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Ylöjärvi</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15802036" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="154" data-mileage="144000" data-year="2016" data-price="7990" data-kmyr="14400" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-2013" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,990 €</td>
+            <td class="num">144,000 km</td>
+            <td class="num">14,400</td>
+            <td class="num deal-good">−2,013 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15759866" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="137000" data-year="2014" data-price="7990" data-kmyr="11417" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-924" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2014)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,990 €</td>
+            <td class="num">137,000 km</td>
+            <td class="num">11,417</td>
+            <td class="num deal-good">−924 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15776176" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="185000" data-year="2014" data-price="7990" data-kmyr="15417" data-dom="8" data-label="Kia Ceed" data-transmission="manual" data-deal="-215" data-firstseen="2026-06-13">
+            <td>2014</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2014)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">7,990 €</td>
+            <td class="num">185,000 km</td>
+            <td class="num">15,417</td>
+            <td class="num deal-good">−215 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15803923" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="145000" data-year="2011" data-price="8200" data-kmyr="9667" data-dom="13" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-1011" data-firstseen="2026-06-16">
+            <td>2011</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2011)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,200 € <span class="badge-down">↓ 400 €</span></td>
+            <td class="num">145,000 km</td>
+            <td class="num">9,667</td>
+            <td class="num deal-good">−1,011 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>Sedan</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15809197" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="154" data-mileage="182000" data-year="2014" data-price="8380" data-kmyr="15167" data-dom="4" data-label="Volkswagen Passat" data-transmission="manual" data-deal="-1750" data-firstseen="2026-06-25">
+            <td>2014</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2014)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,380 € <span class="badge-down">↓ 290 €</span></td>
+            <td class="num">182,000 km</td>
+            <td class="num">15,167</td>
+            <td class="num deal-good">−1,750 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15823599" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="102" data-mileage="157000" data-year="2013" data-price="8480" data-kmyr="12077" data-dom="20" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1315" data-firstseen="2026-06-09">
+            <td>2013</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,480 € <span class="badge-down">↓ 510 €</span></td>
+            <td class="num">157,000 km</td>
+            <td class="num">12,077</td>
+            <td class="num deal-good">−1,315 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lohja</td>
+            <td class="num dom-aging">20d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15795736" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="158000" data-year="2013" data-price="8580" data-kmyr="12154" data-dom="19" data-label="Volkswagen Passat" data-transmission="manual" data-deal="-1606" data-firstseen="2026-06-10">
+            <td>2013</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,580 € <span class="badge-down">↓ 310 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">12,154</td>
+            <td class="num deal-good">−1,606 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">19d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15796328" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="162000" data-year="2013" data-price="8590" data-kmyr="12462" data-dom="16" data-label="Kia Ceed" data-transmission="auto" data-deal="642" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2013)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,590 € <span class="badge-down">↓ 310 €</span></td>
+            <td class="num">162,000 km</td>
+            <td class="num">12,462</td>
+            <td class="num deal-bad">+642 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">16d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15608841" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="182000" data-year="2014" data-price="8670" data-kmyr="15167" data-dom="10" data-label="Volkswagen Passat" data-transmission="manual" data-deal="-1460" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2014)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,670 € <span class="badge-down">↓ 220 €</span></td>
+            <td class="num">182,000 km</td>
+            <td class="num">15,167</td>
+            <td class="num deal-good">−1,460 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15779420" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="118" data-mileage="138000" data-year="2018" data-price="8680" data-kmyr="17250" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-2604" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2018)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,680 €</td>
+            <td class="num">138,000 km</td>
+            <td class="num">17,250</td>
+            <td class="num deal-good">−2,604 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15771810" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="160000" data-year="2013" data-price="8700" data-kmyr="12308" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-1424" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,700 €</td>
+            <td class="num">160,000 km</td>
+            <td class="num">12,308</td>
+            <td class="num deal-good">−1,424 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>Sedan</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15685415" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="118" data-mileage="148000" data-year="2008" data-price="8890" data-kmyr="8222" data-dom="28" data-label="Toyota Avensis" data-transmission="auto" data-deal="179" data-firstseen="2026-05-16">
+            <td>2008</td>
+            <td>Toyota Avensis <button class="info-btn" onclick="showIssues('toyota|avensis', 2008)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,890 €</td>
+            <td class="num">148,000 km</td>
+            <td class="num">8,222</td>
+            <td class="num deal-bad">+179 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-aging">28d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15715950" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="150000" data-year="2015" data-price="8900" data-kmyr="13636" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-418" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2015)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,900 €</td>
+            <td class="num">150,000 km</td>
+            <td class="num">13,636</td>
+            <td class="num deal-good">−418 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15773278" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="7" data-mileage="134000" data-year="2011" data-price="8900" data-kmyr="8933" data-dom="1" data-label="Toyota Yaris" data-transmission="auto" data-deal="-339" data-firstseen="2026-06-28">
+            <td>2011</td>
+            <td>Toyota Yaris <button class="info-btn" onclick="showIssues('toyota|yaris', 2011)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,900 €</td>
+            <td class="num">134,000 km</td>
+            <td class="num">8,933</td>
+            <td class="num deal-good">−339 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Kaarina</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15807714" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="152" data-mileage="149000" data-year="2016" data-price="8950" data-kmyr="14900" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-979" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,950 €</td>
+            <td class="num">149,000 km</td>
+            <td class="num">14,900</td>
+            <td class="num deal-good">−979 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tuusula</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15695475" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="118" data-mileage="150000" data-year="2017" data-price="8980" data-kmyr="16667" data-dom="10" data-label="Kia Ceed" data-transmission="manual" data-deal="-1531" data-firstseen="2026-06-02">
+            <td>2017</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2017)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">8,980 €</td>
+            <td class="num">150,000 km</td>
+            <td class="num">16,667</td>
+            <td class="num deal-good">−1,531 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15744987" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="176000" data-year="2013" data-price="9080" data-kmyr="13538" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="-200" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,080 €</td>
+            <td class="num">176,000 km</td>
+            <td class="num">13,538</td>
+            <td class="num deal-good">−200 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15576382" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="125" data-mileage="167000" data-year="2013" data-price="9290" data-kmyr="12846" data-dom="27" data-label="Kia Ceed" data-transmission="auto" data-deal="1415" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2013)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,290 € <span class="badge-down">↓ 460 €</span></td>
+            <td class="num">167,000 km</td>
+            <td class="num">12,846</td>
+            <td class="num deal-bad">+1,415 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15747857" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="194" data-mileage="188000" data-year="2014" data-price="9350" data-kmyr="15667" data-dom="5" data-label="Kia Ceed" data-transmission="auto" data-deal="1189" data-firstseen="2026-06-07">
+            <td>2014</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2014)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,350 €</td>
+            <td class="num">188,000 km</td>
+            <td class="num">15,667</td>
+            <td class="num deal-bad">+1,189 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15786183" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="167000" data-year="2010" data-price="9490" data-kmyr="10438" data-dom="18" data-label="Toyota Corolla" data-transmission="manual" data-deal="258" data-firstseen="2026-06-11">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,490 €</td>
+            <td class="num">167,000 km</td>
+            <td class="num">10,438</td>
+            <td class="num deal-bad">+258 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">18d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15798956" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="134000" data-year="2013" data-price="9490" data-kmyr="10308" data-dom="3" data-label="Kia Ceed" data-transmission="manual" data-deal="1128" data-firstseen="2026-06-26">
+            <td>2013</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2013)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,490 €</td>
+            <td class="num">134,000 km</td>
+            <td class="num">10,308</td>
+            <td class="num deal-bad">+1,128 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15825981" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="191000" data-year="2012" data-price="9490" data-kmyr="13643" data-dom="11" data-label="Volkswagen Passat" data-transmission="auto" data-deal="1018" data-firstseen="2026-06-18">
+            <td>2012</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2012)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,490 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">13,643</td>
+            <td class="num deal-bad">+1,018 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15813143" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="177000" data-year="2013" data-price="9490" data-kmyr="13615" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="237" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,490 €</td>
+            <td class="num">177,000 km</td>
+            <td class="num">13,615</td>
+            <td class="num deal-bad">+237 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15761360" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="194" data-mileage="108000" data-year="2011" data-price="9490" data-kmyr="7200" data-dom="1" data-label="Toyota Yaris" data-transmission="manual" data-deal="-76" data-firstseen="2026-06-28">
+            <td>2011</td>
+            <td>Toyota Yaris <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|yaris', 2011)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,490 €</td>
+            <td class="num">108,000 km</td>
+            <td class="num">7,200</td>
+            <td class="num deal-good">−76 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15771636" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="155" data-mileage="72000" data-year="2010" data-price="9490" data-kmyr="4500" data-dom="1" data-label="Toyota Yaris" data-transmission="manual" data-deal="-57" data-firstseen="2026-06-28">
+            <td>2010</td>
+            <td>Toyota Yaris <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|yaris', 2010)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,490 €</td>
+            <td class="num">72,000 km</td>
+            <td class="num">4,500</td>
+            <td class="num deal-good">−57 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15784615" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="186" data-mileage="98000" data-year="2015" data-price="9500" data-kmyr="8909" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-586" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2015)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,500 €</td>
+            <td class="num">98,000 km</td>
+            <td class="num">8,909</td>
+            <td class="num deal-good">−586 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15768460" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="165000" data-year="2014" data-price="9690" data-kmyr="13750" data-dom="12" data-label="Skoda Octavia" data-transmission="manual" data-deal="-650" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">9,690 € <span class="badge-down">↓ 50 €</span></td>
+            <td class="num">165,000 km</td>
+            <td class="num">13,750</td>
+            <td class="num deal-good">−650 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15729340" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="134" data-mileage="111000" data-year="2018" data-price="9750" data-kmyr="13875" data-dom="5" data-label="Kia Ceed" data-transmission="manual" data-deal="-1933" data-firstseen="2026-06-07">
+            <td>2018</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2018)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,750 € <span class="badge-down">↓ 40 €</span></td>
+            <td class="num">111,000 km</td>
+            <td class="num">13,875</td>
+            <td class="num deal-good">−1,933 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15785524" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="125" data-mileage="174000" data-year="2014" data-price="9750" data-kmyr="14500" data-dom="27" data-label="Skoda Octavia" data-transmission="manual" data-deal="-346" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">9,750 €</td>
+            <td class="num">174,000 km</td>
+            <td class="num">14,500</td>
+            <td class="num deal-good">−346 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15775292" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="136000" data-year="2009" data-price="9790" data-kmyr="8000" data-dom="29" data-label="Toyota Corolla" data-transmission="manual" data-deal="662" data-firstseen="2026-05-31">
+            <td>2009</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,790 € <span class="badge-up">↑ 390 €</span></td>
+            <td class="num">136,000 km</td>
+            <td class="num">8,000</td>
+            <td class="num deal-bad">+662 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">29d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15777810" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="155" data-mileage="114000" data-year="2008" data-price="9800" data-kmyr="6333" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="939" data-firstseen="2026-05-16">
+            <td>2008</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2008)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,800 €</td>
+            <td class="num">114,000 km</td>
+            <td class="num">6,333</td>
+            <td class="num deal-bad">+939 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15682177" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="86" data-mileage="131000" data-year="2014" data-price="9800" data-kmyr="10917" data-dom="3" data-label="Kia Ceed" data-transmission="manual" data-deal="798" data-firstseen="2026-06-08">
+            <td>2014</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2014)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,800 €</td>
+            <td class="num">131,000 km</td>
+            <td class="num">10,917</td>
+            <td class="num deal-bad">+798 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Rauma</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15793621" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="109000" data-year="2007" data-price="9880" data-kmyr="5737" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="1594" data-firstseen="2026-06-27">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,880 €</td>
+            <td class="num">109,000 km</td>
+            <td class="num">5,737</td>
+            <td class="num deal-bad">+1,594 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15828192" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="194846" data-year="2015" data-price="9890" data-kmyr="17713" data-dom="27" data-label="Kia Ceed" data-transmission="auto" data-deal="1234" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2015)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,890 € <span class="badge-down">↓ 10 €</span></td>
+            <td class="num">194,846 km</td>
+            <td class="num">17,713</td>
+            <td class="num deal-bad">+1,234 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15779181" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="200000" data-year="2013" data-price="9890" data-kmyr="15385" data-dom="27" data-label="Skoda Octavia" data-transmission="manual" data-deal="1260" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,890 € <span class="badge-up">↑ 600 €</span></td>
+            <td class="num">200,000 km</td>
+            <td class="num">15,385</td>
+            <td class="num deal-bad">+1,260 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15733096" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="134" data-mileage="70000" data-year="2010" data-price="9890" data-kmyr="4375" data-dom="1" data-label="Toyota Yaris" data-transmission="auto" data-deal="318" data-firstseen="2026-06-28">
+            <td>2010</td>
+            <td>Toyota Yaris <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('toyota|yaris', 2010)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,890 €</td>
+            <td class="num">70,000 km</td>
+            <td class="num">4,375</td>
+            <td class="num deal-bad">+318 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15691688" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="194" data-mileage="157000" data-year="2005" data-price="9900" data-kmyr="7476" data-dom="5" data-label="Toyota Corolla" data-transmission="auto" data-deal="3814" data-firstseen="2026-05-16">
+            <td>2005</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2005)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,900 €</td>
+            <td class="num">157,000 km</td>
+            <td class="num">7,476</td>
+            <td class="num deal-bad">+3,814 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>Farmari</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">5d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15705128" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="132" data-mileage="99800" data-year="2010" data-price="9900" data-kmyr="6238" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="-549" data-firstseen="2026-05-18">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,900 €</td>
+            <td class="num">99,800 km</td>
+            <td class="num">6,238</td>
+            <td class="num deal-good">−549 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Valkeakoski</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15750784" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="194" data-mileage="117000" data-year="2007" data-price="9900" data-kmyr="6158" data-dom="4" data-label="Toyota Corolla" data-transmission="auto" data-deal="1759" data-firstseen="2026-05-21">
+            <td>2007</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2007)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,900 €</td>
+            <td class="num">117,000 km</td>
+            <td class="num">6,158</td>
+            <td class="num deal-bad">+1,759 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15757488" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="111000" data-year="2016" data-price="9900" data-kmyr="11100" data-dom="7" data-label="Kia Ceed" data-transmission="manual" data-deal="-590" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,900 €</td>
+            <td class="num">111,000 km</td>
+            <td class="num">11,100</td>
+            <td class="num deal-good">−590 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15755252" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="152000" data-year="2014" data-price="9970" data-kmyr="12667" data-dom="24" data-label="Skoda Octavia" data-transmission="auto" data-deal="-722" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">9,970 € <span class="badge-down">↓ 370 €</span></td>
+            <td class="num">152,000 km</td>
+            <td class="num">12,667</td>
+            <td class="num deal-good">−722 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">24d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15727275" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="84" data-mileage="150000" data-year="2011" data-price="9990" data-kmyr="10000" data-dom="4" data-label="Toyota Corolla" data-transmission="manual" data-deal="-215" data-firstseen="2026-05-16">
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">9,990 €</td>
+            <td class="num">150,000 km</td>
+            <td class="num">10,000</td>
+            <td class="num deal-good">−215 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Forssa</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15748321" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="120000" data-year="2016" data-price="9990" data-kmyr="12000" data-dom="22" data-label="Kia Ceed" data-transmission="auto" data-deal="-367" data-firstseen="2026-06-07">
+            <td>2016</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">9,990 €</td>
+            <td class="num">120,000 km</td>
+            <td class="num">12,000</td>
+            <td class="num deal-good">−367 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">22d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15789208" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="7" data-mileage="181000" data-year="2016" data-price="10000" data-kmyr="18100" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-1539" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">10,000 €</td>
+            <td class="num">181,000 km</td>
+            <td class="num">18,100</td>
+            <td class="num deal-good">−1,539 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Kaarina</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15781143" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="93000" data-year="2008" data-price="10290" data-kmyr="5167" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="1049" data-firstseen="2026-06-11">
+            <td>2008</td>
+            <td>Toyota Corolla <button class="info-btn" onclick="showIssues('toyota|corolla', 2008)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">10,290 €</td>
+            <td class="num">93,000 km</td>
+            <td class="num">5,167</td>
+            <td class="num deal-bad">+1,049 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15800692" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="178000" data-year="2015" data-price="10490" data-kmyr="16182" data-dom="0" data-label="Skoda Octavia" data-transmission="manual" data-deal="-259" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Skoda Octavia</td>
+            <td class="num">10,490 €</td>
+            <td class="num">178,000 km</td>
+            <td class="num">16,182</td>
+            <td class="num deal-good">−259 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15767142" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="168000" data-year="2016" data-price="10670" data-kmyr="16800" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-1273" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">10,670 €</td>
+            <td class="num">168,000 km</td>
+            <td class="num">16,800</td>
+            <td class="num deal-good">−1,273 €</td>
+            <td>–</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15594906" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="151" data-mileage="97000" data-year="2011" data-price="10690" data-kmyr="6467" data-dom="9" data-label="Toyota Corolla" data-transmission="manual" data-deal="-475" data-firstseen="2026-05-16">
+            <td>2011</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span></td>
+            <td class="num">10,690 €</td>
+            <td class="num">97,000 km</td>
+            <td class="num">6,467</td>
+            <td class="num deal-good">−475 €</td>
+            <td>1300cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15721575" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="98000" data-year="2015" data-price="10880" data-kmyr="8909" data-dom="20" data-label="Kia Ceed" data-transmission="manual" data-deal="794" data-firstseen="2026-06-09">
+            <td>2015</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2015)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">10,880 € <span class="badge-down">↓ 20 €</span></td>
+            <td class="num">98,000 km</td>
+            <td class="num">8,909</td>
+            <td class="num deal-bad">+794 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">20d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15794847" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="155" data-mileage="188000" data-year="2014" data-price="10890" data-kmyr="15667" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="1174" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">10,890 € <span class="badge-down">↓ 400 €</span></td>
+            <td class="num">188,000 km</td>
+            <td class="num">15,667</td>
+            <td class="num deal-bad">+1,174 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15707781" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="175000" data-year="2013" data-price="10900" data-kmyr="13462" data-dom="14" data-label="Toyota Avensis" data-transmission="manual" data-deal="-485" data-firstseen="2026-05-16">
+            <td>2013</td>
+            <td>Toyota Avensis</td>
+            <td class="num">10,900 €</td>
+            <td class="num">175,000 km</td>
+            <td class="num">13,462</td>
+            <td class="num deal-good">−485 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15689599" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="125" data-mileage="122000" data-year="2010" data-price="10980" data-kmyr="7625" data-dom="44" data-label="Toyota Avensis" data-transmission="manual" data-deal="-890" data-firstseen="2026-05-16">
+            <td>2010</td>
+            <td>Toyota Avensis</td>
+            <td class="num">10,980 € <span class="badge-down">↓ 1,470 €</span></td>
+            <td class="num">122,000 km</td>
+            <td class="num">7,625</td>
+            <td class="num deal-good">−890 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-stale">44d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15714404" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="142" data-mileage="136000" data-year="2012" data-price="10990" data-kmyr="9714" data-dom="2" data-label="Toyota Corolla" data-transmission="auto" data-deal="-134" data-firstseen="2026-05-16">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,990 € <span class="badge-down">↓ 500 €</span></td>
+            <td class="num">136,000 km</td>
+            <td class="num">9,714</td>
+            <td class="num deal-good">−134 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15680886" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="100000" data-year="2010" data-price="10990" data-kmyr="6250" data-dom="4" data-label="Toyota Corolla" data-transmission="manual" data-deal="545" data-firstseen="2026-05-21">
+            <td>2010</td>
+            <td>Toyota Corolla</td>
+            <td class="num">10,990 €</td>
+            <td class="num">100,000 km</td>
+            <td class="num">6,250</td>
+            <td class="num deal-bad">+545 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15758731" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="151" data-mileage="195900" data-year="2016" data-price="10990" data-kmyr="19590" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-35" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">10,990 € <span class="badge-down">↓ 300 €</span></td>
+            <td class="num">195,900 km</td>
+            <td class="num">19,590</td>
+            <td class="num deal-good">−35 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15699937" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="135000" data-year="2011" data-price="11200" data-kmyr="9000" data-dom="11" data-label="Toyota Corolla" data-transmission="auto" data-deal="723" data-firstseen="2026-05-16">
+            <td>2011</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,200 € <span class="badge-down">↓ 690 €</span></td>
+            <td class="num">135,000 km</td>
+            <td class="num">9,000</td>
+            <td class="num deal-bad">+723 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15716691" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="154" data-mileage="191000" data-year="2020" data-price="11250" data-kmyr="31833" data-dom="15" data-label="Skoda Octavia" data-transmission="auto" data-deal="-2953" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Skoda Octavia <span class="badge-pareto">★</span></td>
+            <td class="num">11,250 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">31,833</td>
+            <td class="num deal-good">−2,953 €</td>
+            <td>1500cc</td>
+            <td>Kaasu</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">15d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15276071" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="142" data-mileage="190000" data-year="2015" data-price="11380" data-kmyr="17273" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="957" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Skoda Octavia</td>
+            <td class="num">11,380 €</td>
+            <td class="num">190,000 km</td>
+            <td class="num">17,273</td>
+            <td class="num deal-bad">+957 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15755937" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="142" data-mileage="157000" data-year="2019" data-price="11390" data-kmyr="22429" data-dom="27" data-label="Kia Ceed" data-transmission="manual" data-deal="-210" data-firstseen="2026-06-02">
+            <td>2019</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">11,390 € <span class="badge-down">↓ 600 €</span></td>
+            <td class="num">157,000 km</td>
+            <td class="num">22,429</td>
+            <td class="num deal-good">−210 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15739692" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="198000" data-year="2015" data-price="11490" data-kmyr="18000" data-dom="27" data-label="Volkswagen Passat" data-transmission="auto" data-deal="1168" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2015)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,490 € <span class="badge-down">↓ 300 €</span></td>
+            <td class="num">198,000 km</td>
+            <td class="num">18,000</td>
+            <td class="num deal-bad">+1,168 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15538343" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="190000" data-year="2016" data-price="11490" data-kmyr="19000" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="230" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">11,490 €</td>
+            <td class="num">190,000 km</td>
+            <td class="num">19,000</td>
+            <td class="num deal-bad">+230 €</td>
+            <td>1400cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15776773" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="113" data-mileage="141000" data-year="2012" data-price="11500" data-kmyr="10071" data-dom="17" data-label="Toyota Corolla" data-transmission="manual" data-deal="466" data-firstseen="2026-05-16">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,500 € <span class="badge-down">↓ 400 €</span></td>
+            <td class="num">141,000 km</td>
+            <td class="num">10,071</td>
+            <td class="num deal-bad">+466 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Nummela</td>
+            <td class="num dom-aging">17d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15723588" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="134" data-mileage="83000" data-year="2018" data-price="11500" data-kmyr="10375" data-dom="12" data-label="Kia Ceed" data-transmission="manual" data-deal="-596" data-firstseen="2026-06-17">
+            <td>2018</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span> <button class="info-btn" onclick="showIssues('kia|ceed', 2018)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,500 €</td>
+            <td class="num">83,000 km</td>
+            <td class="num">10,375</td>
+            <td class="num deal-good">−596 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">12d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15810364" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="91" data-mileage="123379" data-year="2012" data-price="11690" data-kmyr="8813" data-dom="8" data-label="Toyota Corolla" data-transmission="manual" data-deal="337" data-firstseen="2026-06-07">
+            <td>2012</td>
+            <td>Toyota Corolla</td>
+            <td class="num">11,690 €</td>
+            <td class="num">123,379 km</td>
+            <td class="num">8,813</td>
+            <td class="num deal-bad">+337 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Raasepori</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15789114" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="181000" data-year="2014" data-price="11690" data-kmyr="15083" data-dom="8" data-label="Skoda Octavia" data-transmission="auto" data-deal="1784" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">11,690 €</td>
+            <td class="num">181,000 km</td>
+            <td class="num">15,083</td>
+            <td class="num deal-bad">+1,784 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15758097" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="142000" data-year="2013" data-price="11690" data-kmyr="10923" data-dom="15" data-label="Skoda Octavia" data-transmission="manual" data-deal="1488" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Skoda Octavia <button class="info-btn" onclick="showIssues('skoda|octavia', 2013)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,690 € <span class="badge-down">↓ 210 €</span></td>
+            <td class="num">142,000 km</td>
+            <td class="num">10,923</td>
+            <td class="num deal-bad">+1,488 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">15d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15773910" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="158000" data-year="2016" data-price="11790" data-kmyr="15800" data-dom="26" data-label="Skoda Octavia" data-transmission="manual" data-deal="-262" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">11,790 € <span class="badge-down">↓ 200 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">15,800</td>
+            <td class="num deal-good">−262 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">26d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15782688" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="143" data-mileage="186000" data-year="2018" data-price="11870" data-kmyr="23250" data-dom="3" data-label="Kia Ceed" data-transmission="auto" data-deal="1294" data-firstseen="2026-06-26">
+            <td>2018</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2018)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,870 €</td>
+            <td class="num">186,000 km</td>
+            <td class="num">23,250</td>
+            <td class="num deal-bad">+1,294 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15826190" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="155" data-mileage="133000" data-year="2019" data-price="11890" data-kmyr="19000" data-dom="19" data-label="Kia Ceed" data-transmission="manual" data-deal="-64" data-firstseen="2026-06-10">
+            <td>2019</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">11,890 € <span class="badge-down">↓ 590 €</span></td>
+            <td class="num">133,000 km</td>
+            <td class="num">19,000</td>
+            <td class="num deal-good">−64 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-aging">19d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15796314" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="102" data-mileage="149000" data-year="2015" data-price="11890" data-kmyr="13545" data-dom="14" data-label="Skoda Octavia" data-transmission="auto" data-deal="355" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Skoda Octavia</td>
+            <td class="num">11,890 €</td>
+            <td class="num">149,000 km</td>
+            <td class="num">13,545</td>
+            <td class="num deal-bad">+355 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lohja</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15698157" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="7" data-mileage="171000" data-year="2017" data-price="11900" data-kmyr="19000" data-dom="4" data-label="Kia Ceed" data-transmission="auto" data-deal="1699" data-firstseen="2026-06-25">
+            <td>2017</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2017)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,900 €</td>
+            <td class="num">171,000 km</td>
+            <td class="num">19,000</td>
+            <td class="num deal-bad">+1,699 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Raisio</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15823139" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="191000" data-year="2016" data-price="11900" data-kmyr="19100" data-dom="27" data-label="Volkswagen Passat" data-transmission="auto" data-deal="671" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">11,900 €</td>
+            <td class="num">191,000 km</td>
+            <td class="num">19,100</td>
+            <td class="num deal-bad">+671 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15783870" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="181000" data-year="2016" data-price="11900" data-kmyr="18100" data-dom="9" data-label="Skoda Octavia" data-transmission="auto" data-deal="471" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">11,900 €</td>
+            <td class="num">181,000 km</td>
+            <td class="num">18,100</td>
+            <td class="num deal-bad">+471 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15752076" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="7" data-mileage="147000" data-year="2020" data-price="11950" data-kmyr="24500" data-dom="27" data-label="Kia Ceed" data-transmission="manual" data-deal="-394" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">11,950 €</td>
+            <td class="num">147,000 km</td>
+            <td class="num">24,500</td>
+            <td class="num deal-good">−394 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Raisio</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15717017" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="109000" data-year="2013" data-price="11990" data-kmyr="8385" data-dom="4" data-label="Kia Ceed" data-transmission="" data-deal="3259" data-firstseen="2026-06-25">
+            <td>2013</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2013)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">11,990 €</td>
+            <td class="num">109,000 km</td>
+            <td class="num">8,385</td>
+            <td class="num deal-bad">+3,259 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>–</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15821617" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="186" data-mileage="182000" data-year="2018" data-price="11990" data-kmyr="22750" data-dom="13" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-897" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">11,990 € <span class="badge-up">↑ 700 €</span></td>
+            <td class="num">182,000 km</td>
+            <td class="num">22,750</td>
+            <td class="num deal-good">−897 €</td>
+            <td>–</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15777737" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="190000" data-year="2015" data-price="12280" data-kmyr="17273" data-dom="27" data-label="Volkswagen Passat" data-transmission="auto" data-deal="1709" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2015)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">12,280 € <span class="badge-down">↓ 120 €</span></td>
+            <td class="num">190,000 km</td>
+            <td class="num">17,273</td>
+            <td class="num deal-bad">+1,709 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15684723" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="58" data-mileage="156000" data-year="2016" data-price="12290" data-kmyr="15600" data-dom="25" data-label="Skoda Octavia" data-transmission="auto" data-deal="184" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,290 € <span class="badge-down">↓ 80 €</span></td>
+            <td class="num">156,000 km</td>
+            <td class="num">15,600</td>
+            <td class="num deal-bad">+184 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Salo</td>
+            <td class="num dom-aging">25d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15741346" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="58" data-mileage="180000" data-year="2014" data-price="12370" data-kmyr="15000" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="2437" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,370 €</td>
+            <td class="num">180,000 km</td>
+            <td class="num">15,000</td>
+            <td class="num deal-bad">+2,437 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Salo</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15690762" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="162000" data-year="2016" data-price="12390" data-kmyr="16200" data-dom="13" data-label="Kia Ceed" data-transmission="auto" data-deal="2653" data-firstseen="2026-06-16">
+            <td>2016</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2016)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">12,390 € <span class="badge-down">↓ 210 €</span></td>
+            <td class="num">162,000 km</td>
+            <td class="num">16,200</td>
+            <td class="num deal-bad">+2,653 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15810247" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="168000" data-year="2017" data-price="12400" data-kmyr="18667" data-dom="20" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-232" data-firstseen="2026-06-02">
+            <td>2017</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">12,400 € <span class="badge-down">↓ 190 €</span></td>
+            <td class="num">168,000 km</td>
+            <td class="num">18,667</td>
+            <td class="num deal-good">−232 €</td>
+            <td>1400cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">20d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15697423" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="7" data-mileage="171000" data-year="2019" data-price="12540" data-kmyr="24429" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1444" data-firstseen="2026-06-02">
+            <td>2019</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,540 € <span class="badge-down">↓ 350 €</span></td>
+            <td class="num">171,000 km</td>
+            <td class="num">24,429</td>
+            <td class="num deal-good">−1,444 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Raisio</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15688393" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="186" data-mileage="182000" data-year="2019" data-price="12790" data-kmyr="26000" data-dom="22" data-label="Skoda Octavia" data-transmission="manual" data-deal="-896" data-firstseen="2026-06-07">
+            <td>2019</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,790 € <span class="badge-down">↓ 1,200 €</span></td>
+            <td class="num">182,000 km</td>
+            <td class="num">26,000</td>
+            <td class="num deal-good">−896 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Porvoo</td>
+            <td class="num dom-aging">22d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15787983" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="108000" data-year="2012" data-price="12800" data-kmyr="7714" data-dom="14" data-label="Volkswagen Passat" data-transmission="auto" data-deal="1751" data-firstseen="2026-06-15">
+            <td>2012</td>
+            <td>Volkswagen Passat <button class="info-btn" onclick="showIssues('volkswagen|passat', 2012)" title="2 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">12,800 €</td>
+            <td class="num">108,000 km</td>
+            <td class="num">7,714</td>
+            <td class="num deal-bad">+1,751 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>Sedan</td>
+            <td>Turku</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15806329" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="156000" data-year="2017" data-price="12800" data-kmyr="17333" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-205" data-firstseen="2026-06-16">
+            <td>2017</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">12,800 €</td>
+            <td class="num">156,000 km</td>
+            <td class="num">17,333</td>
+            <td class="num deal-good">−205 €</td>
+            <td>1400cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15809543" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="151000" data-year="2015" data-price="12800" data-kmyr="13727" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="1320" data-firstseen="2026-06-02">
+            <td>2015</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,800 € <span class="badge-down">↓ 680 €</span></td>
+            <td class="num">151,000 km</td>
+            <td class="num">13,727</td>
+            <td class="num deal-bad">+1,320 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15696655" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="151" data-mileage="158000" data-year="2013" data-price="12890" data-kmyr="12154" data-dom="11" data-label="Toyota Corolla" data-transmission="auto" data-deal="1499" data-firstseen="2026-06-18">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">12,890 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">12,154</td>
+            <td class="num deal-bad">+1,499 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15814193" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="7" data-mileage="171000" data-year="2021" data-price="12900" data-kmyr="34200" data-dom="2" data-label="Kia Ceed" data-transmission="manual" data-deal="314" data-firstseen="2026-06-27">
+            <td>2021</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">12,900 €</td>
+            <td class="num">171,000 km</td>
+            <td class="num">34,200</td>
+            <td class="num deal-bad">+314 €</td>
+            <td>1600cc</td>
+            <td>Hybridi (diesel/sähkö)</td>
+            <td>Manuaali</td>
+            <td>Farmari</td>
+            <td>Kaarina</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15829374" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="86" data-mileage="128000" data-year="2016" data-price="12900" data-kmyr="12800" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="35" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,900 €</td>
+            <td class="num">128,000 km</td>
+            <td class="num">12,800</td>
+            <td class="num deal-bad">+35 €</td>
+            <td>1200cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Rauma</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15782102" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="118" data-mileage="155000" data-year="2016" data-price="12900" data-kmyr="15500" data-dom="10" data-label="Skoda Octavia" data-transmission="manual" data-deal="767" data-firstseen="2026-06-19">
+            <td>2016</td>
+            <td>Skoda Octavia</td>
+            <td class="num">12,900 €</td>
+            <td class="num">155,000 km</td>
+            <td class="num">15,500</td>
+            <td class="num deal-bad">+767 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15815076" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="118" data-mileage="188000" data-year="2013" data-price="12980" data-kmyr="14462" data-dom="8" data-label="Toyota Corolla" data-transmission="auto" data-deal="2132" data-firstseen="2026-06-02">
+            <td>2013</td>
+            <td>Toyota Corolla</td>
+            <td class="num">12,980 €</td>
+            <td class="num">188,000 km</td>
+            <td class="num">14,462</td>
+            <td class="num deal-bad">+2,132 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15782113" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="142" data-mileage="87000" data-year="2019" data-price="12990" data-kmyr="12429" data-dom="1" data-label="Kia Ceed" data-transmission="manual" data-deal="356" data-firstseen="2026-06-15">
+            <td>2019</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">12,990 €</td>
+            <td class="num">87,000 km</td>
+            <td class="num">12,429</td>
+            <td class="num deal-bad">+356 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15807945" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="102000" data-year="2010" data-price="13200" data-kmyr="6375" data-dom="10" data-label="Toyota Avensis" data-transmission="manual" data-deal="194" data-firstseen="2026-05-16">
+            <td>2010</td>
+            <td>Toyota Avensis</td>
+            <td class="num">13,200 € <span class="badge-down">↓ 80 €</span></td>
+            <td class="num">102,000 km</td>
+            <td class="num">6,375</td>
+            <td class="num deal-bad">+194 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Farmari</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15680348" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="191000" data-year="2017" data-price="13290" data-kmyr="21222" data-dom="9" data-label="Toyota Corolla" data-transmission="manual" data-deal="-165" data-firstseen="2026-05-16">
+            <td>2017</td>
+            <td>Toyota Corolla</td>
+            <td class="num">13,290 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">191,000 km</td>
+            <td class="num">21,222</td>
+            <td class="num deal-good">−165 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15644176" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="112000" data-year="2017" data-price="13350" data-kmyr="12444" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-710" data-firstseen="2026-06-02">
+            <td>2017</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,350 € <span class="badge-down">↓ 100 €</span></td>
+            <td class="num">112,000 km</td>
+            <td class="num">12,444</td>
+            <td class="num deal-good">−710 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15647577" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="134000" data-year="2016" data-price="13380" data-kmyr="13400" data-dom="24" data-label="Volkswagen Passat" data-transmission="auto" data-deal="381" data-firstseen="2026-06-02">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">13,380 € <span class="badge-down">↓ 10 €</span></td>
+            <td class="num">134,000 km</td>
+            <td class="num">13,400</td>
+            <td class="num deal-bad">+381 €</td>
+            <td>1400cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">24d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15779746" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="151" data-mileage="107000" data-year="2018" data-price="13440" data-kmyr="13375" data-dom="1" data-label="Toyota Yaris" data-transmission="auto" data-deal="562" data-firstseen="2026-06-28">
+            <td>2018</td>
+            <td>Toyota Yaris</td>
+            <td class="num">13,440 €</td>
+            <td class="num">107,000 km</td>
+            <td class="num">13,375</td>
+            <td class="num deal-bad">+562 €</td>
+            <td>1500cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15811491" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="167000" data-year="2014" data-price="13480" data-kmyr="13917" data-dom="6" data-label="Skoda Octavia" data-transmission="auto" data-deal="3195" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,480 €</td>
+            <td class="num">167,000 km</td>
+            <td class="num">13,917</td>
+            <td class="num deal-bad">+3,195 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15759431" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="91" data-mileage="84000" data-year="2021" data-price="13490" data-kmyr="16800" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-380" data-firstseen="2026-06-02">
+            <td>2021</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">13,490 €</td>
+            <td class="num">84,000 km</td>
+            <td class="num">16,800</td>
+            <td class="num deal-good">−380 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Raasepori</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15770229" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="186000" data-year="2020" data-price="13490" data-kmyr="31000" data-dom="8" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-651" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">13,490 €</td>
+            <td class="num">186,000 km</td>
+            <td class="num">31,000</td>
+            <td class="num deal-good">−651 €</td>
+            <td>–</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">8d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15646861" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="194" data-mileage="128500" data-year="2018" data-price="13490" data-kmyr="16062" data-dom="27" data-label="Skoda Octavia" data-transmission="manual" data-deal="-884" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,490 €</td>
+            <td class="num">128,500 km</td>
+            <td class="num">16,062</td>
+            <td class="num deal-good">−884 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15783319" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="180000" data-year="2017" data-price="13590" data-kmyr="20000" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="1373" data-firstseen="2026-06-02">
+            <td>2017</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,590 € <span class="badge-down">↓ 310 €</span></td>
+            <td class="num">180,000 km</td>
+            <td class="num">20,000</td>
+            <td class="num deal-bad">+1,373 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Turku</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15672194" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active pareto-row" data-pareto="1" data-dist="134" data-mileage="74000" data-year="2020" data-price="13600" data-kmyr="12333" data-dom="27" data-label="Kia Ceed" data-transmission="manual" data-deal="178" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">13,600 €</td>
+            <td class="num">74,000 km</td>
+            <td class="num">12,333</td>
+            <td class="num deal-bad">+178 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15735314" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="102" data-mileage="59000" data-year="2020" data-price="13690" data-kmyr="9833" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="47" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">13,690 €</td>
+            <td class="num">59,000 km</td>
+            <td class="num">9,833</td>
+            <td class="num deal-bad">+47 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lohja</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15463687" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="89000" data-year="2020" data-price="13780" data-kmyr="14833" data-dom="7" data-label="Kia Ceed" data-transmission="manual" data-deal="580" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Kia Ceed</td>
+            <td class="num">13,780 €</td>
+            <td class="num">89,000 km</td>
+            <td class="num">14,833</td>
+            <td class="num deal-bad">+580 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-fresh">7d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15751847" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="129000" data-year="2017" data-price="13790" data-kmyr="14333" data-dom="22" data-label="Skoda Octavia" data-transmission="manual" data-deal="191" data-firstseen="2026-06-07">
+            <td>2017</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,790 € <span class="badge-down">↓ 700 €</span></td>
+            <td class="num">129,000 km</td>
+            <td class="num">14,333</td>
+            <td class="num deal-bad">+191 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">22d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15786775" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="118" data-mileage="28000" data-year="2015" data-price="13800" data-kmyr="2545" data-dom="2" data-label="Toyota Corolla" data-transmission="manual" data-deal="-1277" data-firstseen="2026-05-16">
+            <td>2015</td>
+            <td>Toyota Corolla <span class="badge-pareto">★</span></td>
+            <td class="num">13,800 €</td>
+            <td class="num">28,000 km</td>
+            <td class="num">2,545</td>
+            <td class="num deal-good">−1,277 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">2d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15745263" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="0" data-mileage="158000" data-year="2013" data-price="13800" data-kmyr="12154" data-dom="11" data-label="Toyota Avensis" data-transmission="manual" data-deal="1450" data-firstseen="2026-05-16">
+            <td>2013</td>
+            <td>Toyota Avensis</td>
+            <td class="num">13,800 € <span class="badge-up">↑ 10 €</span></td>
+            <td class="num">158,000 km</td>
+            <td class="num">12,154</td>
+            <td class="num deal-bad">+1,450 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Farmari</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15718613" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="58" data-mileage="93000" data-year="2018" data-price="13800" data-kmyr="11625" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1537" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,800 €</td>
+            <td class="num">93,000 km</td>
+            <td class="num">11,625</td>
+            <td class="num deal-good">−1,537 €</td>
+            <td>1400cc</td>
+            <td>Kaasu</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Salo</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15688805" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="152" data-mileage="63000" data-year="2018" data-price="13880" data-kmyr="7875" data-dom="27" data-label="Kia Ceed" data-transmission="manual" data-deal="1488" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Kia Ceed <button class="info-btn" onclick="showIssues('kia|ceed', 2018)" title="1 known issue(s) reported for this model/year">ⓘ</button></td>
+            <td class="num">13,880 € <span class="badge-up">↑ 480 €</span></td>
+            <td class="num">63,000 km</td>
+            <td class="num">7,875</td>
+            <td class="num deal-bad">+1,488 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tuusula</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15759563" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="134" data-mileage="90000" data-year="2023" data-price="13890" data-kmyr="30000" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="-1084" data-firstseen="2026-06-02">
+            <td>2023</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">13,890 €</td>
+            <td class="num">90,000 km</td>
+            <td class="num">30,000</td>
+            <td class="num deal-good">−1,084 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15646789" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="200000" data-year="2021" data-price="13890" data-kmyr="40000" data-dom="27" data-label="Kia Ceed" data-transmission="auto" data-deal="1732" data-firstseen="2026-06-02">
+            <td>2021</td>
+            <td>Kia Ceed</td>
+            <td class="num">13,890 € <span class="badge-down">↓ 890 €</span></td>
+            <td class="num">200,000 km</td>
+            <td class="num">40,000</td>
+            <td class="num deal-bad">+1,732 €</td>
+            <td>1500cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15657887" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="154" data-mileage="150000" data-year="2018" data-price="13890" data-kmyr="18750" data-dom="27" data-label="Volkswagen Passat" data-transmission="auto" data-deal="10" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">13,890 € <span class="badge-up">↑ 490 €</span></td>
+            <td class="num">150,000 km</td>
+            <td class="num">18,750</td>
+            <td class="num deal-bad">+10 €</td>
+            <td>–</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15736723" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="132000" data-year="2017" data-price="13900" data-kmyr="14667" data-dom="10" data-label="Skoda Octavia" data-transmission="auto" data-deal="382" data-firstseen="2026-06-02">
+            <td>2017</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,900 €</td>
+            <td class="num">132,000 km</td>
+            <td class="num">14,667</td>
+            <td class="num deal-bad">+382 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15778930" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="134" data-mileage="185000" data-year="2019" data-price="13900" data-kmyr="26429" data-dom="22" data-label="Skoda Octavia" data-transmission="auto" data-deal="296" data-firstseen="2026-06-07">
+            <td>2019</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,900 € <span class="badge-down">↓ 1,000 €</span></td>
+            <td class="num">185,000 km</td>
+            <td class="num">26,429</td>
+            <td class="num deal-bad">+296 €</td>
+            <td>1500cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">22d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15790730" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="0" data-mileage="186000" data-year="2016" data-price="13990" data-kmyr="18600" data-dom="6" data-label="Volkswagen Passat" data-transmission="manual" data-deal="2606" data-firstseen="2026-06-23">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">13,990 € <span class="badge-up">↑ 300 €</span></td>
+            <td class="num">186,000 km</td>
+            <td class="num">18,600</td>
+            <td class="num deal-bad">+2,606 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>Sedan</td>
+            <td>Turku</td>
+            <td class="num dom-fresh">6d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15819316" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="155" data-mileage="182000" data-year="2019" data-price="13990" data-kmyr="26000" data-dom="13" data-label="Skoda Octavia" data-transmission="manual" data-deal="304" data-firstseen="2026-06-02">
+            <td>2019</td>
+            <td>Skoda Octavia</td>
+            <td class="num">13,990 € <span class="badge-down">↓ 300 €</span></td>
+            <td class="num">182,000 km</td>
+            <td class="num">26,000</td>
+            <td class="num deal-bad">+304 €</td>
+            <td>1500cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15704298" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="151" data-mileage="60400" data-year="2020" data-price="13999" data-kmyr="10067" data-dom="1" data-label="Toyota Yaris" data-transmission="auto" data-deal="-408" data-firstseen="2026-06-28">
+            <td>2020</td>
+            <td>Toyota Yaris</td>
+            <td class="num">13,999 €</td>
+            <td class="num">60,400 km</td>
+            <td class="num">10,067</td>
+            <td class="num deal-good">−408 €</td>
+            <td>1500cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">1d</td>
+            <td><a href="https://www.nettiauto.com/toyota/yaris/15792753" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="194" data-mileage="160000" data-year="2018" data-price="14000" data-kmyr="20000" data-dom="10" data-label="Skoda Octavia" data-transmission="auto" data-deal="479" data-firstseen="2026-06-19">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,000 €</td>
+            <td class="num">160,000 km</td>
+            <td class="num">20,000</td>
+            <td class="num deal-bad">+479 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Lahti</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15815022" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="170000" data-year="2020" data-price="14290" data-kmyr="28333" data-dom="9" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-348" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">14,290 € <span class="badge-down">↓ 80 €</span></td>
+            <td class="num">170,000 km</td>
+            <td class="num">28,333</td>
+            <td class="num deal-good">−348 €</td>
+            <td>–</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">9d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15617693" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="151" data-mileage="189000" data-year="2018" data-price="14490" data-kmyr="23625" data-dom="10" data-label="Skoda Octavia" data-transmission="auto" data-deal="1755" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,490 € <span class="badge-down">↓ 90 €</span></td>
+            <td class="num">189,000 km</td>
+            <td class="num">23,625</td>
+            <td class="num deal-bad">+1,755 €</td>
+            <td>1500cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Helsinki</td>
+            <td class="num dom-fresh">10d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15656534" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="113" data-mileage="176000" data-year="2018" data-price="14490" data-kmyr="22000" data-dom="0" data-label="Skoda Octavia" data-transmission="auto" data-deal="1403" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,490 €</td>
+            <td class="num">176,000 km</td>
+            <td class="num">22,000</td>
+            <td class="num deal-bad">+1,403 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Nummela</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15707137" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="121000" data-year="2014" data-price="14590" data-kmyr="10083" data-dom="16" data-label="Toyota Corolla" data-transmission="auto" data-deal="1863" data-firstseen="2026-06-13">
+            <td>2014</td>
+            <td>Toyota Corolla</td>
+            <td class="num">14,590 € <span class="badge-down">↓ 300 €</span></td>
+            <td class="num">121,000 km</td>
+            <td class="num">10,083</td>
+            <td class="num deal-bad">+1,863 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">16d</td>
+            <td><a href="https://www.nettiauto.com/toyota/corolla/15803895" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="143" data-mileage="191000" data-year="2022" data-price="14590" data-kmyr="47750" data-dom="23" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1136" data-firstseen="2026-06-02">
+            <td>2022</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,590 € <span class="badge-down">↓ 200 €</span></td>
+            <td class="num">191,000 km</td>
+            <td class="num">47,750</td>
+            <td class="num deal-good">−1,136 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hyvinkää</td>
+            <td class="num dom-aging">23d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15686196" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="154" data-mileage="165000" data-year="2020" data-price="14690" data-kmyr="27500" data-dom="0" data-label="Volkswagen Passat" data-transmission="auto" data-deal="-103" data-firstseen="2026-06-02">
+            <td>2020</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">14,690 €</td>
+            <td class="num">165,000 km</td>
+            <td class="num">27,500</td>
+            <td class="num deal-good">−103 €</td>
+            <td>1400cc</td>
+            <td>Hybridi (bensiini/sähkö)</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15780815" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="154" data-mileage="160000" data-year="2018" data-price="14690" data-kmyr="20000" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="1169" data-firstseen="2026-06-02">
+            <td>2018</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,690 €</td>
+            <td class="num">160,000 km</td>
+            <td class="num">20,000</td>
+            <td class="num deal-bad">+1,169 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Vantaa</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15773169" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="125" data-mileage="56000" data-year="2021" data-price="14800" data-kmyr="11200" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="516" data-firstseen="2026-06-02">
+            <td>2021</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">14,800 €</td>
+            <td class="num">56,000 km</td>
+            <td class="num">11,200</td>
+            <td class="num deal-bad">+516 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Lempäälä</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15766806" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="170000" data-year="2020" data-price="14800" data-kmyr="28333" data-dom="11" data-label="Skoda Octavia" data-transmission="auto" data-deal="28" data-firstseen="2026-06-07">
+            <td>2020</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,800 €</td>
+            <td class="num">170,000 km</td>
+            <td class="num">28,333</td>
+            <td class="num deal-bad">+28 €</td>
+            <td>1500cc</td>
+            <td>Kaasu</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-fresh">11d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15791867" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="142" data-mileage="152000" data-year="2021" data-price="14900" data-kmyr="30400" data-dom="27" data-label="Skoda Octavia" data-transmission="auto" data-deal="-1122" data-firstseen="2026-06-02">
+            <td>2021</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,900 €</td>
+            <td class="num">152,000 km</td>
+            <td class="num">30,400</td>
+            <td class="num deal-good">−1,122 €</td>
+            <td>1500cc</td>
+            <td>Kaasu</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-aging">27d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15666977" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="84" data-mileage="85000" data-year="2014" data-price="14900" data-kmyr="7083" data-dom="13" data-label="Skoda Octavia" data-transmission="auto" data-deal="2392" data-firstseen="2026-06-02">
+            <td>2014</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,900 €</td>
+            <td class="num">85,000 km</td>
+            <td class="num">7,083</td>
+            <td class="num deal-bad">+2,392 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Forssa</td>
+            <td class="num dom-fresh">13d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15766877" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="165000" data-year="2021" data-price="14900" data-kmyr="33000" data-dom="21" data-label="Skoda Octavia" data-transmission="auto" data-deal="-769" data-firstseen="2026-06-02">
+            <td>2021</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,900 € <span class="badge-down">↓ 499 €</span></td>
+            <td class="num">165,000 km</td>
+            <td class="num">33,000</td>
+            <td class="num deal-good">−769 €</td>
+            <td>1500cc</td>
+            <td>Kaasu</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Hämeenlinna</td>
+            <td class="num dom-aging">21d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15771714" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="142" data-mileage="152000" data-year="2016" data-price="14990" data-kmyr="15200" data-dom="3" data-label="Toyota Avensis" data-transmission="manual" data-deal="-225" data-firstseen="2026-06-25">
+            <td>2016</td>
+            <td>Toyota Avensis</td>
+            <td class="num">14,990 €</td>
+            <td class="num">152,000 km</td>
+            <td class="num">15,200</td>
+            <td class="num deal-good">−225 €</td>
+            <td>1600cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Tampere</td>
+            <td class="num dom-fresh">3d</td>
+            <td><a href="https://www.nettiauto.com/toyota/avensis/15823996" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive pareto-row" data-pareto="1" data-dist="84" data-mileage="63000" data-year="2022" data-price="14990" data-kmyr="15750" data-dom="0" data-label="Kia Ceed" data-transmission="manual" data-deal="213" data-firstseen="2026-06-02">
+            <td>2022</td>
+            <td>Kia Ceed <span class="badge-pareto">★</span></td>
+            <td class="num">14,990 €</td>
+            <td class="num">63,000 km</td>
+            <td class="num">15,750</td>
+            <td class="num deal-bad">+213 €</td>
+            <td>1000cc</td>
+            <td>Bensiini</td>
+            <td>Manuaali</td>
+            <td>–</td>
+            <td>Forssa</td>
+            <td class="num dom-fresh">0d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15648345" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="155" data-mileage="134000" data-year="2019" data-price="14990" data-kmyr="19143" data-dom="23" data-label="Kia Ceed" data-transmission="auto" data-deal="3050" data-firstseen="2026-06-02">
+            <td>2019</td>
+            <td>Kia Ceed</td>
+            <td class="num">14,990 € <span class="badge-down">↓ 410 €</span></td>
+            <td class="num">134,000 km</td>
+            <td class="num">19,143</td>
+            <td class="num deal-bad">+3,050 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Järvenpää</td>
+            <td class="num dom-aging">23d</td>
+            <td><a href="https://www.nettiauto.com/kia/ceed/15725288" target="_blank">View →</a></td>
+        </tr>
+        <tr class="active" data-pareto="0" data-dist="118" data-mileage="165000" data-year="2016" data-price="14990" data-kmyr="16500" data-dom="4" data-label="Volkswagen Passat" data-transmission="auto" data-deal="2954" data-firstseen="2026-06-25">
+            <td>2016</td>
+            <td>Volkswagen Passat</td>
+            <td class="num">14,990 €</td>
+            <td class="num">165,000 km</td>
+            <td class="num">16,500</td>
+            <td class="num deal-bad">+2,954 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Pori</td>
+            <td class="num dom-fresh">4d</td>
+            <td><a href="https://www.nettiauto.com/volkswagen/passat/15823000" target="_blank">View →</a></td>
+        </tr>
+        <tr class="inactive" data-pareto="0" data-dist="134" data-mileage="166000" data-year="2017" data-price="14990" data-kmyr="18444" data-dom="14" data-label="Skoda Octavia" data-transmission="auto" data-deal="2393" data-firstseen="2026-06-07">
+            <td>2017</td>
+            <td>Skoda Octavia</td>
+            <td class="num">14,990 € <span class="badge-up">↑ 90 €</span></td>
+            <td class="num">166,000 km</td>
+            <td class="num">18,444</td>
+            <td class="num deal-bad">+2,393 €</td>
+            <td>1400cc</td>
+            <td>Bensiini</td>
+            <td>Automaatti</td>
+            <td>–</td>
+            <td>Espoo</td>
+            <td class="num dom-aging">14d</td>
+            <td><a href="https://www.nettiauto.com/skoda/octavia/15786134" target="_blank">View →</a></td>
+        </tr></tbody>
+</table>
+</div>
+
+<h2>Charts <button class="btn-toggle" id="trendBtn" onclick="toggleTrendLines()" style="margin-left:1rem;font-size:0.75rem;vertical-align:middle">Hide trend lines</button></h2>
+<div class="model-bar-sm"><button class="btn-toggle btn-toggle-sm active" data-model="Skoda Octavia" onclick="toggleModel(this)">Skoda Octavia</button><button class="btn-toggle btn-toggle-sm active" data-model="Toyota Corolla" onclick="toggleModel(this)">Toyota Corolla</button><button class="btn-toggle btn-toggle-sm active" data-model="Kia Ceed" onclick="toggleModel(this)">Kia Ceed</button><button class="btn-toggle btn-toggle-sm active" data-model="Toyota Avensis" onclick="toggleModel(this)">Toyota Avensis</button><button class="btn-toggle btn-toggle-sm active" data-model="Volkswagen Passat" onclick="toggleModel(this)">Volkswagen Passat</button><button class="btn-toggle btn-toggle-sm active" data-model="Toyota Yaris" onclick="toggleModel(this)">Toyota Yaris</button></div>
+<div class="charts">
+  <div class="chart-box wide">
+    <canvas id="scatter"></canvas>
+  </div>
+</div>
+
+<div class="modal-overlay" id="issuesModal" onclick="if(event.target===this) closeIssuesModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="issuesModalTitle"></h3>
+      <button class="modal-close" onclick="closeIssuesModal()">✕</button>
+    </div>
+    <div id="issuesModalBody"></div>
+  </div>
+</div>
+
+<script>
+const scatter = new Chart(document.getElementById('scatter'), {
+  type: 'scatter',
+  data: { datasets: [{"label": "Skoda Octavia", "data": [{"x": 111000, "y": 5450, "label": "2006 Skoda Octavia \u2014 Raisio"}, {"x": 179000, "y": 5490, "label": "2011 Skoda Octavia \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 158500, "y": 6290, "label": "2010 Skoda Octavia \u2014 Porvoo"}, {"x": 193000, "y": 6700, "label": "2012 Skoda Octavia \u2014 Tampere"}, {"x": 183000, "y": 6900, "label": "2012 Skoda Octavia \u2014 P\u00f6yty\u00e4"}, {"x": 147000, "y": 7300, "label": "2012 Skoda Octavia \u2014 Espoo"}, {"x": 169000, "y": 7500, "label": "2013 Skoda Octavia \u2014 Valkeakoski"}, {"x": 171000, "y": 7980, "label": "2014 Skoda Octavia \u2014 Yl\u00f6j\u00e4rvi"}, {"x": 157000, "y": 8480, "label": "2013 Skoda Octavia \u2014 Lohja"}, {"x": 176000, "y": 9080, "label": "2013 Skoda Octavia \u2014 Hyvink\u00e4\u00e4"}, {"x": 177000, "y": 9490, "label": "2013 Skoda Octavia \u2014 Tampere"}, {"x": 165000, "y": 9690, "label": "2014 Skoda Octavia \u2014 H\u00e4meenlinna"}, {"x": 174000, "y": 9750, "label": "2014 Skoda Octavia \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 200000, "y": 9890, "label": "2013 Skoda Octavia \u2014 H\u00e4meenlinna"}, {"x": 152000, "y": 9970, "label": "2014 Skoda Octavia \u2014 Helsinki"}, {"x": 178000, "y": 10490, "label": "2015 Skoda Octavia \u2014 Vantaa"}, {"x": 188000, "y": 10890, "label": "2014 Skoda Octavia \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 195900, "y": 10990, "label": "2016 Skoda Octavia \u2014 Helsinki"}, {"x": 191000, "y": 11250, "label": "2020 Skoda Octavia \u2014 Vantaa"}, {"x": 190000, "y": 11380, "label": "2015 Skoda Octavia \u2014 Tampere"}, {"x": 181000, "y": 11690, "label": "2014 Skoda Octavia \u2014 Turku"}, {"x": 142000, "y": 11690, "label": "2013 Skoda Octavia \u2014 Espoo"}, {"x": 158000, "y": 11790, "label": "2016 Skoda Octavia \u2014 Turku"}, {"x": 149000, "y": 11890, "label": "2015 Skoda Octavia \u2014 Lohja"}, {"x": 181000, "y": 11900, "label": "2016 Skoda Octavia \u2014 Helsinki"}, {"x": 156000, "y": 12290, "label": "2016 Skoda Octavia \u2014 Salo"}, {"x": 180000, "y": 12370, "label": "2014 Skoda Octavia \u2014 Salo"}, {"x": 171000, "y": 12540, "label": "2019 Skoda Octavia \u2014 Raisio"}, {"x": 182000, "y": 12790, "label": "2019 Skoda Octavia \u2014 Porvoo"}, {"x": 151000, "y": 12800, "label": "2015 Skoda Octavia \u2014 Tampere"}, {"x": 128000, "y": 12900, "label": "2016 Skoda Octavia \u2014 Rauma"}, {"x": 155000, "y": 12900, "label": "2016 Skoda Octavia \u2014 Pori"}, {"x": 112000, "y": 13350, "label": "2017 Skoda Octavia \u2014 Turku"}, {"x": 167000, "y": 13480, "label": "2014 Skoda Octavia \u2014 Hyvink\u00e4\u00e4"}, {"x": 128500, "y": 13490, "label": "2018 Skoda Octavia \u2014 Lahti"}, {"x": 180000, "y": 13590, "label": "2017 Skoda Octavia \u2014 Turku"}, {"x": 129000, "y": 13790, "label": "2017 Skoda Octavia \u2014 Espoo"}, {"x": 93000, "y": 13800, "label": "2018 Skoda Octavia \u2014 Salo"}, {"x": 132000, "y": 13900, "label": "2017 Skoda Octavia \u2014 Espoo"}, {"x": 185000, "y": 13900, "label": "2019 Skoda Octavia \u2014 Espoo"}, {"x": 182000, "y": 13990, "label": "2019 Skoda Octavia \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 160000, "y": 14000, "label": "2018 Skoda Octavia \u2014 Lahti"}, {"x": 189000, "y": 14490, "label": "2018 Skoda Octavia \u2014 Helsinki"}, {"x": 176000, "y": 14490, "label": "2018 Skoda Octavia \u2014 Nummela"}, {"x": 191000, "y": 14590, "label": "2022 Skoda Octavia \u2014 Hyvink\u00e4\u00e4"}, {"x": 160000, "y": 14690, "label": "2018 Skoda Octavia \u2014 Vantaa"}, {"x": 170000, "y": 14800, "label": "2020 Skoda Octavia \u2014 Espoo"}, {"x": 152000, "y": 14900, "label": "2021 Skoda Octavia \u2014 Tampere"}, {"x": 85000, "y": 14900, "label": "2014 Skoda Octavia \u2014 Forssa"}, {"x": 165000, "y": 14900, "label": "2021 Skoda Octavia \u2014 H\u00e4meenlinna"}, {"x": 166000, "y": 14990, "label": "2017 Skoda Octavia \u2014 Espoo"}], "backgroundColor": "#3b82f6", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Corolla", "data": [{"x": 178000, "y": 5670, "label": "2006 Toyota Corolla \u2014 Helsinki"}, {"x": 183000, "y": 5790, "label": "2006 Toyota Corolla \u2014 Lahti"}, {"x": 198000, "y": 5800, "label": "2006 Toyota Corolla \u2014 Espoo"}, {"x": 183000, "y": 5850, "label": "2006 Toyota Corolla \u2014 Tampere"}, {"x": 185000, "y": 5880, "label": "2007 Toyota Corolla \u2014 Helsinki"}, {"x": 145000, "y": 5900, "label": "2006 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 155000, "y": 5900, "label": "2007 Toyota Corolla \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 100000, "y": 5950, "label": "2006 Toyota Corolla \u2014 Nokia"}, {"x": 191000, "y": 5990, "label": "2007 Toyota Corolla \u2014 Kangasala"}, {"x": 191000, "y": 6390, "label": "2007 Toyota Corolla \u2014 Kangasala"}, {"x": 153000, "y": 6390, "label": "2006 Toyota Corolla \u2014 Hyvink\u00e4\u00e4"}, {"x": 122000, "y": 6900, "label": "2006 Toyota Corolla \u2014 Porvoo"}, {"x": 122000, "y": 6900, "label": "2006 Toyota Corolla \u2014 Porvoo"}, {"x": 164500, "y": 6950, "label": "2012 Toyota Corolla \u2014 Sastamala"}, {"x": 189000, "y": 6990, "label": "2006 Toyota Corolla \u2014 Yl\u00f6j\u00e4rvi"}, {"x": 142000, "y": 6990, "label": "2008 Toyota Corolla \u2014 Turku"}, {"x": 129000, "y": 6990, "label": "2007 Toyota Corolla \u2014 Raisio"}, {"x": 95177, "y": 6999, "label": "2005 Toyota Corolla \u2014 Kokem\u00e4ki"}, {"x": 192000, "y": 7490, "label": "2010 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 174000, "y": 7600, "label": "2009 Toyota Corolla \u2014 Espoo"}, {"x": 199000, "y": 7690, "label": "2006 Toyota Corolla \u2014 Lahti"}, {"x": 149000, "y": 7900, "label": "2008 Toyota Corolla \u2014 Tuusula"}, {"x": 76753, "y": 7900, "label": "2006 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 116000, "y": 7900, "label": "2005 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 192000, "y": 7900, "label": "2008 Toyota Corolla \u2014 Lahti"}, {"x": 167000, "y": 9490, "label": "2010 Toyota Corolla \u2014 Porvoo"}, {"x": 136000, "y": 9790, "label": "2009 Toyota Corolla \u2014 Turku"}, {"x": 114000, "y": 9800, "label": "2008 Toyota Corolla \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 109000, "y": 9880, "label": "2007 Toyota Corolla \u2014 Tampere"}, {"x": 157000, "y": 9900, "label": "2005 Toyota Corolla \u2014 Lahti"}, {"x": 99800, "y": 9900, "label": "2010 Toyota Corolla \u2014 Valkeakoski"}, {"x": 117000, "y": 9900, "label": "2007 Toyota Corolla \u2014 Lahti"}, {"x": 150000, "y": 9990, "label": "2011 Toyota Corolla \u2014 Forssa"}, {"x": 93000, "y": 10290, "label": "2008 Toyota Corolla \u2014 H\u00e4meenlinna"}, {"x": 97000, "y": 10690, "label": "2011 Toyota Corolla \u2014 Helsinki"}, {"x": 136000, "y": 10990, "label": "2012 Toyota Corolla \u2014 Tampere"}, {"x": 100000, "y": 10990, "label": "2010 Toyota Corolla \u2014 H\u00e4meenlinna"}, {"x": 135000, "y": 11200, "label": "2011 Toyota Corolla \u2014 Espoo"}, {"x": 141000, "y": 11500, "label": "2012 Toyota Corolla \u2014 Nummela"}, {"x": 123379, "y": 11690, "label": "2012 Toyota Corolla \u2014 Raasepori"}, {"x": 158000, "y": 12890, "label": "2013 Toyota Corolla \u2014 Helsinki"}, {"x": 188000, "y": 12980, "label": "2013 Toyota Corolla \u2014 Pori"}, {"x": 191000, "y": 13290, "label": "2017 Toyota Corolla \u2014 Vantaa"}, {"x": 28000, "y": 13800, "label": "2015 Toyota Corolla \u2014 Pori"}, {"x": 121000, "y": 14590, "label": "2014 Toyota Corolla \u2014 Tampere"}], "backgroundColor": "#f59e0b", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Kia Ceed", "data": [{"x": 119000, "y": 5900, "label": "2011 Kia Ceed \u2014 Helsinki"}, {"x": 183000, "y": 6890, "label": "2016 Kia Ceed \u2014 Espoo"}, {"x": 193000, "y": 6900, "label": "2015 Kia Ceed \u2014 Vantaa"}, {"x": 172000, "y": 6900, "label": "2016 Kia Ceed \u2014 Lahti"}, {"x": 117000, "y": 6990, "label": "2010 Kia Ceed \u2014 Kaarina"}, {"x": 114000, "y": 7900, "label": "2014 Kia Ceed \u2014 Tampere"}, {"x": 144000, "y": 7990, "label": "2016 Kia Ceed \u2014 Vantaa"}, {"x": 137000, "y": 7990, "label": "2014 Kia Ceed \u2014 Vantaa"}, {"x": 185000, "y": 7990, "label": "2014 Kia Ceed \u2014 Vantaa"}, {"x": 162000, "y": 8590, "label": "2013 Kia Ceed \u2014 Espoo"}, {"x": 138000, "y": 8680, "label": "2018 Kia Ceed \u2014 Pori"}, {"x": 150000, "y": 8900, "label": "2015 Kia Ceed \u2014 Helsinki"}, {"x": 149000, "y": 8950, "label": "2016 Kia Ceed \u2014 Tuusula"}, {"x": 150000, "y": 8980, "label": "2017 Kia Ceed \u2014 Pori"}, {"x": 167000, "y": 9290, "label": "2013 Kia Ceed \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 188000, "y": 9350, "label": "2014 Kia Ceed \u2014 Lahti"}, {"x": 134000, "y": 9490, "label": "2013 Kia Ceed \u2014 Tampere"}, {"x": 98000, "y": 9500, "label": "2015 Kia Ceed \u2014 Porvoo"}, {"x": 111000, "y": 9750, "label": "2018 Kia Ceed \u2014 H\u00e4meenlinna"}, {"x": 131000, "y": 9800, "label": "2014 Kia Ceed \u2014 Rauma"}, {"x": 194846, "y": 9890, "label": "2015 Kia Ceed \u2014 Porvoo"}, {"x": 111000, "y": 9900, "label": "2016 Kia Ceed \u2014 Vantaa"}, {"x": 120000, "y": 9990, "label": "2016 Kia Ceed \u2014 Espoo"}, {"x": 98000, "y": 10880, "label": "2015 Kia Ceed \u2014 Porvoo"}, {"x": 157000, "y": 11390, "label": "2019 Kia Ceed \u2014 Tampere"}, {"x": 83000, "y": 11500, "label": "2018 Kia Ceed \u2014 Espoo"}, {"x": 186000, "y": 11870, "label": "2018 Kia Ceed \u2014 Hyvink\u00e4\u00e4"}, {"x": 133000, "y": 11890, "label": "2019 Kia Ceed \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 171000, "y": 11900, "label": "2017 Kia Ceed \u2014 Raisio"}, {"x": 147000, "y": 11950, "label": "2020 Kia Ceed \u2014 Raisio"}, {"x": 109000, "y": 11990, "label": "2013 Kia Ceed \u2014 Tampere"}, {"x": 162000, "y": 12390, "label": "2016 Kia Ceed \u2014 Tampere"}, {"x": 171000, "y": 12900, "label": "2021 Kia Ceed \u2014 Kaarina"}, {"x": 87000, "y": 12990, "label": "2019 Kia Ceed \u2014 Tampere"}, {"x": 84000, "y": 13490, "label": "2021 Kia Ceed \u2014 Raasepori"}, {"x": 74000, "y": 13600, "label": "2020 Kia Ceed \u2014 H\u00e4meenlinna"}, {"x": 59000, "y": 13690, "label": "2020 Kia Ceed \u2014 Lohja"}, {"x": 89000, "y": 13780, "label": "2020 Kia Ceed \u2014 H\u00e4meenlinna"}, {"x": 63000, "y": 13880, "label": "2018 Kia Ceed \u2014 Tuusula"}, {"x": 90000, "y": 13890, "label": "2023 Kia Ceed \u2014 Espoo"}, {"x": 200000, "y": 13890, "label": "2021 Kia Ceed \u2014 Tampere"}, {"x": 56000, "y": 14800, "label": "2021 Kia Ceed \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 63000, "y": 14990, "label": "2022 Kia Ceed \u2014 Forssa"}, {"x": 134000, "y": 14990, "label": "2019 Kia Ceed \u2014 J\u00e4rvenp\u00e4\u00e4"}], "backgroundColor": "#10b981", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Avensis", "data": [{"x": 174000, "y": 6200, "label": "2008 Toyota Avensis \u2014 Helsinki"}, {"x": 163000, "y": 6990, "label": "2006 Toyota Avensis \u2014 Raisio"}, {"x": 148000, "y": 8890, "label": "2008 Toyota Avensis \u2014 Pori"}, {"x": 175000, "y": 10900, "label": "2013 Toyota Avensis \u2014 Hyvink\u00e4\u00e4"}, {"x": 122000, "y": 10980, "label": "2010 Toyota Avensis \u2014 Lemp\u00e4\u00e4l\u00e4"}, {"x": 102000, "y": 13200, "label": "2010 Toyota Avensis \u2014 H\u00e4meenlinna"}, {"x": 158000, "y": 13800, "label": "2013 Toyota Avensis \u2014 Turku"}, {"x": 152000, "y": 14990, "label": "2016 Toyota Avensis \u2014 Tampere"}], "backgroundColor": "#ef4444", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Volkswagen Passat", "data": [{"x": 145000, "y": 8200, "label": "2011 Volkswagen Passat \u2014 Tampere"}, {"x": 182000, "y": 8380, "label": "2014 Volkswagen Passat \u2014 Vantaa"}, {"x": 158000, "y": 8580, "label": "2013 Volkswagen Passat \u2014 Tampere"}, {"x": 182000, "y": 8670, "label": "2014 Volkswagen Passat \u2014 Vantaa"}, {"x": 160000, "y": 8700, "label": "2013 Volkswagen Passat \u2014 Vantaa"}, {"x": 191000, "y": 9490, "label": "2012 Volkswagen Passat \u2014 H\u00e4meenlinna"}, {"x": 181000, "y": 10000, "label": "2016 Volkswagen Passat \u2014 Kaarina"}, {"x": 168000, "y": 10670, "label": "2016 Volkswagen Passat \u2014 Helsinki"}, {"x": 198000, "y": 11490, "label": "2015 Volkswagen Passat \u2014 Turku"}, {"x": 190000, "y": 11490, "label": "2016 Volkswagen Passat \u2014 Turku"}, {"x": 191000, "y": 11900, "label": "2016 Volkswagen Passat \u2014 Tampere"}, {"x": 182000, "y": 11990, "label": "2018 Volkswagen Passat \u2014 Porvoo"}, {"x": 190000, "y": 12280, "label": "2015 Volkswagen Passat \u2014 Espoo"}, {"x": 168000, "y": 12400, "label": "2017 Volkswagen Passat \u2014 Turku"}, {"x": 108000, "y": 12800, "label": "2012 Volkswagen Passat \u2014 Turku"}, {"x": 156000, "y": 12800, "label": "2017 Volkswagen Passat \u2014 Helsinki"}, {"x": 134000, "y": 13380, "label": "2016 Volkswagen Passat \u2014 Espoo"}, {"x": 186000, "y": 13490, "label": "2020 Volkswagen Passat \u2014 Espoo"}, {"x": 150000, "y": 13890, "label": "2018 Volkswagen Passat \u2014 Vantaa"}, {"x": 186000, "y": 13990, "label": "2016 Volkswagen Passat \u2014 Turku"}, {"x": 170000, "y": 14290, "label": "2020 Volkswagen Passat \u2014 Vantaa"}, {"x": 165000, "y": 14690, "label": "2020 Volkswagen Passat \u2014 Vantaa"}, {"x": 165000, "y": 14990, "label": "2016 Volkswagen Passat \u2014 Pori"}], "backgroundColor": "#8b5cf6", "pointRadius": 7, "pointHoverRadius": 9}, {"label": "Toyota Yaris", "data": [{"x": 134000, "y": 8900, "label": "2011 Toyota Yaris \u2014 Kaarina"}, {"x": 108000, "y": 9490, "label": "2011 Toyota Yaris \u2014 Lahti"}, {"x": 72000, "y": 9490, "label": "2010 Toyota Yaris \u2014 J\u00e4rvenp\u00e4\u00e4"}, {"x": 70000, "y": 9890, "label": "2010 Toyota Yaris \u2014 H\u00e4meenlinna"}, {"x": 107000, "y": 13440, "label": "2018 Toyota Yaris \u2014 Helsinki"}, {"x": 60400, "y": 13999, "label": "2020 Toyota Yaris \u2014 Helsinki"}], "backgroundColor": "#ec4899", "pointRadius": 7, "pointHoverRadius": 9}] },
+  options: {
+    plugins: {
+      title: { display: true, text: 'Price vs Mileage' },
+      tooltip: { callbacks: { label: ctx => ctx.raw.label + ' — ' + ctx.raw.y.toLocaleString() + ' € / ' + ctx.raw.x.toLocaleString() + ' km' } }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Mileage (km)' } },
+      y: { title: { display: true, text: 'Price (€)' } }
+    }
+  }
+});
+const regLineData = [{"label": "Skoda Octavia trend", "modelLabel": "Skoda Octavia", "data": [{"x": 85000, "y": 14031}, {"x": 200000, "y": 10914}], "color": "#3b82f6"}, {"label": "Toyota Corolla trend", "modelLabel": "Toyota Corolla", "data": [{"x": 28000, "y": 10419}, {"x": 199000, "y": 7322}], "color": "#f59e0b"}, {"label": "Kia Ceed trend", "modelLabel": "Kia Ceed", "data": [{"x": 56000, "y": 11302}, {"x": 200000, "y": 9176}], "color": "#10b981"}, {"label": "Toyota Avensis trend", "modelLabel": "Toyota Avensis", "data": [{"x": 102000, "y": 13006}, {"x": 175000, "y": 8861}], "color": "#ef4444"}, {"label": "Volkswagen Passat trend", "modelLabel": "Volkswagen Passat", "data": [{"x": 108000, "y": 13806}, {"x": 198000, "y": 11011}], "color": "#8b5cf6"}, {"label": "Toyota Yaris trend", "modelLabel": "Toyota Yaris", "data": [{"x": 60400, "y": 10164}, {"x": 134000, "y": 9239}], "color": "#ec4899"}];
+const regLineModelMap = Object.fromEntries(regLineData.map(d => [d.label, d.modelLabel]));
+regLineData.forEach(d => {
+    scatter.data.datasets.push({
+        type: 'line', label: d.label, data: d.data,
+        borderColor: d.color, borderWidth: 1.5, borderDash: [6, 4],
+        pointRadius: 0, fill: false,
+    });
+});
+scatter.update();
+
+const enabledModels = new Set(["Skoda Octavia", "Toyota Corolla", "Kia Ceed", "Toyota Avensis", "Volkswagen Passat", "Toyota Yaris"]);
+let showTrendLines = true;
+function updateChartVisibility() {
+    scatter.data.datasets.forEach(ds => {
+        if (ds.type === 'line') {
+            ds.hidden = !showTrendLines || !enabledModels.has(regLineModelMap[ds.label]);
+        } else {
+            ds.hidden = !enabledModels.has(ds.label);
+        }
+    });
+}
+function toggleModel(btn) {
+    const label = btn.dataset.model;
+    const allBtns = document.querySelectorAll('[data-model="' + label + '"]');
+    if (enabledModels.has(label)) {
+        enabledModels.delete(label);
+        allBtns.forEach(b => b.classList.remove('active'));
+    } else {
+        enabledModels.add(label);
+        allBtns.forEach(b => b.classList.add('active'));
+    }
+    updateChartVisibility();
+    scatter.update();
+    applyFilters();
+}
+function toggleTrendLines() {
+    showTrendLines = !showTrendLines;
+    const btn = document.getElementById('trendBtn');
+    btn.textContent = showTrendLines ? 'Hide trend lines' : 'Show trend lines';
+    btn.classList.toggle('active', !showTrendLines);
+    updateChartVisibility();
+    scatter.update();
+}
+
+let hideSold = false;
+function toggleHideSold() {
+    hideSold = !hideSold;
+    const btn = document.getElementById('hideSoldBtn');
+    btn.textContent = hideSold ? 'Show sold' : 'Hide sold';
+    btn.classList.toggle('active', hideSold);
+    applyFilters();
+}
+let paretoOnly = false;
+function toggleParetoOnly() {
+    paretoOnly = !paretoOnly;
+    document.getElementById('paretoBtn').classList.toggle('active', paretoOnly);
+    applyFilters();
+}
+let transFilter = 0;
+const transLabels = ['All transmissions', 'Automatic only', 'Manual only'];
+function toggleTrans() {
+    transFilter = (transFilter + 1) % 3;
+    const btn = document.getElementById('transBtn');
+    btn.textContent = transLabels[transFilter];
+    btn.classList.toggle('active', transFilter !== 0);
+    applyFilters();
+}
+function applyFilters() {
+    const maxDist      = parseInt(document.getElementById('distSlider').value);
+    const maxMileage   = parseInt(document.getElementById('mileageSlider').value);
+    const minYear      = parseInt(document.getElementById('yearSlider').value);
+    const firstSeenDays = parseInt(document.getElementById('firstSeenFilter').value);
+    const cutoffStr    = firstSeenDays > 0
+        ? new Date(Date.now() - firstSeenDays * 86400000).toISOString().slice(0, 10)
+        : '';
+    document.querySelectorAll('tbody tr').forEach(tr => {
+        const dist    = tr.dataset.dist;
+        const mileage = tr.dataset.mileage;
+        const year    = tr.dataset.year;
+        const distOk      = dist === ''    || parseFloat(dist)    <= maxDist;
+        const mileageOk   = mileage === '' || parseFloat(mileage) <= maxMileage;
+        const yearOk      = year === ''    || parseInt(year)      >= minYear;
+        const modelOk     = enabledModels.has(tr.dataset.label);
+        const soldOk      = !hideSold  || tr.classList.contains('active');
+        const paretoOk    = !paretoOnly || tr.dataset.pareto === '1';
+        const transOk     = transFilter === 0 || (transFilter === 1 && tr.dataset.transmission === 'auto') || (transFilter === 2 && tr.dataset.transmission === 'manual');
+        const firstSeenOk = !cutoffStr || (tr.dataset.firstseen && tr.dataset.firstseen >= cutoffStr);
+        tr.style.display = (distOk && mileageOk && yearOk && modelOk && soldOk && paretoOk && transOk && firstSeenOk) ? '' : 'none';
+    });
+}
+
+let sortCol = null, sortDir = 'desc';
+document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.sort;
+        sortDir = (sortCol === col && sortDir === 'desc') ? 'asc' : 'desc';
+        sortCol = col;
+        document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(sortDir === 'desc' ? 'sort-desc' : 'sort-asc');
+        const tbody = document.querySelector('tbody');
+        Array.from(tbody.querySelectorAll('tr'))
+            .sort((a, b) => {
+                const av = parseFloat(a.dataset[col]);
+                const bv = parseFloat(b.dataset[col]);
+                const an = isNaN(av), bn = isNaN(bv);
+                if (an && bn) return 0;
+                if (an) return 1;
+                if (bn) return -1;
+                return sortDir === 'desc' ? bv - av : av - bv;
+            })
+            .forEach(row => tbody.appendChild(row));
+    });
+});
+
+const slider = document.getElementById('distSlider');
+const distVal = document.getElementById('distVal');
+slider.addEventListener('input', () => { distVal.textContent = parseInt(slider.value).toLocaleString(); applyFilters(); });
+
+const mileageSlider = document.getElementById('mileageSlider');
+const mileageVal = document.getElementById('mileageVal');
+mileageSlider.addEventListener('input', () => { mileageVal.textContent = parseInt(mileageSlider.value).toLocaleString(); applyFilters(); });
+
+const yearSlider = document.getElementById('yearSlider');
+const yearVal = document.getElementById('yearVal');
+yearSlider.addEventListener('input', () => { yearVal.textContent = yearSlider.value; applyFilters(); });
+
+const knownIssuesData = {"toyota|corolla": [{"yearMin": 1997, "yearMax": 2002, "title": "Automatic transmission wear/failure", "description": "The A241E/A245E 4-speed automatics fitted to this generation are commonly reported to develop harsh shifting and eventual failure, especially on cars that have not had the transmission fluid changed on schedule.", "source": "general-knowledge"}, {"yearMin": 2000, "yearMax": 2008, "title": "Rust in rear wheel arches and subframe", "description": "Corollas from this era are frequently reported to develop rust around the rear wheel arches and subframe mounting points in Nordic climates, mainly due to road salt exposure.", "source": "forum"}], "toyota|avensis": [{"yearMin": 1997, "yearMax": 2008, "title": "Ignition coil failures", "description": "Petrol Avensis models from the T22/T25 generations are commonly reported to suffer ignition coil failures, causing misfires and rough idle; a moderately common repair on higher-mileage cars.", "source": "forum"}, {"yearMin": 2003, "yearMax": 2008, "title": "Multi-information display failure", "description": "The dashboard multi-function display (trip computer/clock) is a well-known weak point on T25 Avensis models and frequently stops working or shows garbled segments.", "source": "general-knowledge"}], "kia|ceed": [{"yearMin": 2006, "yearMax": 2012, "title": "Dual-mass flywheel wear", "description": "Manual first-generation Ceeds are commonly reported to wear out their dual-mass flywheel prematurely, presenting as rattling at idle and vibration through the clutch pedal.", "source": "forum"}, {"yearMin": 2012, "yearMax": 2018, "title": "Timing chain tensioner rattle (petrol GDI engines)", "description": "Some second-generation Ceed petrol GDI engines are reported to develop a rattling timing chain at cold start due to tensioner wear; not universal, but frequently mentioned in owner forums.", "source": "general-knowledge"}], "volkswagen|passat": [{"yearMin": 2005, "yearMax": 2015, "title": "Timing chain tensioner failure (1.8/2.0 TSI)", "description": "Early EA888/EA111 TSI engines used in this generation are widely reported to suffer timing chain tensioner failures, which can lead to chain skip and serious engine damage if not caught early. One of the most cited issues for this generation.", "source": "forum"}, {"yearMin": 2005, "yearMax": 2015, "title": "DSG mechatronic unit faults", "description": "Passats fitted with the DSG dual-clutch automatic are commonly reported to develop mechatronic unit faults, causing jerky shifting or the transmission entering limp mode.", "source": "general-knowledge"}], "skoda|octavia": [{"yearMin": 2004, "yearMax": 2013, "title": "Timing chain tensioner failure (shared VAG TSI engines)", "description": "Mk2 Octavias share the same EA888/EA111 TSI engines as contemporary VW/Audi models and carry the same widely-reported timing chain tensioner risk.", "source": "forum"}, {"yearMin": 2004, "yearMax": 2013, "title": "DSG mechatronic unit faults", "description": "As with other VAG models of this era, DSG-equipped Octavias are commonly reported to develop mechatronic unit issues over time.", "source": "general-knowledge"}], "toyota|yaris": [{"yearMin": 1999, "yearMax": 2011, "title": "Generally reliable \u2014 few systemic issues reported", "description": "First and second generation Yaris models have a strong reliability reputation; reported issues tend to be isolated (e.g. power steering pump wear) rather than systemic. Treat any single-car issue on its own merits.", "source": "general-knowledge"}], "toyota|auris": [{"yearMin": 2013, "yearMax": 2018, "title": "CVT judder on hybrid variants", "description": "Some owners of hybrid Auris models report a shudder or judder from the CVT/e-CVT transmission at low speed, particularly noticeable when cold; not consistently reproducible across all cars.", "source": "user"}]};
+const sourceLabels = {
+    recall: 'Recall / TSB',
+    forum: 'Owner forums',
+    user: 'User-reported',
+    'general-knowledge': 'General knowledge — unverified',
+};
+function showIssues(key, year) {
+    const entries = (knownIssuesData[key] || []).filter(e => {
+        const yMin = e.yearMin ?? -Infinity, yMax = e.yearMax ?? Infinity;
+        return year === null || (year >= yMin && year <= yMax);
+    });
+    const [make, model] = key.split('|');
+    const titleCase = s => s.charAt(0).toUpperCase() + s.slice(1);
+    document.getElementById('issuesModalTitle').textContent =
+        `${titleCase(make)} ${titleCase(model)}${year ? ' (' + year + ')' : ''} — known issues`;
+    document.getElementById('issuesModalBody').innerHTML = entries.length
+        ? entries.map(e => `
+            <div class="issue-item">
+                <div class="issue-title">${e.title}</div>
+                <div class="issue-desc">${e.description}</div>
+                <span class="issue-source source-${e.source}">${sourceLabels[e.source] || e.source}</span>
+            </div>`).join('')
+        : '<p style="font-size:0.85rem;color:#64748b">No reports specific to this year — see the model\'s general entries.</p>';
+    document.getElementById('issuesModal').classList.add('open');
+}
+function closeIssuesModal() {
+    document.getElementById('issuesModal').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeIssuesModal(); });
+</script>
+</body>
+</html>
