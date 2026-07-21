@@ -1,0 +1,127 @@
+# known_issues.toml
+#
+# A curated reference of commonly-reported problems for specific make/model/year
+# combinations. Surfaced in report.html as an "ⓘ" button next to matching listings.
+#
+# Fields:
+#   make, model        — lowercase, matched against the scraped listing's make/model
+#   year_min/year_max  — optional inclusive bounds; omit either to leave unbounded
+#   title              — short one-line summary
+#   description        — 1-3 sentences of detail
+#   source             — one of:
+#       "recall"             official recall / manufacturer TSB
+#       "forum"              widely corroborated across owner forums / aggregator sites
+#       "general-knowledge"  commonly cited but not tied to a specific source here — verify before relying on it
+#       "user"               a single self-reported experience — treat with the most caution
+#
+# Add entries as you (or others) come across corroborated issues. This file is
+# meant to grow over time; it is not exhaustive and nothing here is a substitute
+# for a pre-purchase inspection.
+
+[[issues]]
+make = "toyota"
+model = "corolla"
+year_min = 1997
+year_max = 2002
+title = "Automatic transmission wear/failure"
+description = "The A241E/A245E 4-speed automatics fitted to this generation are commonly reported to develop harsh shifting and eventual failure, especially on cars that have not had the transmission fluid changed on schedule."
+source = "general-knowledge"
+
+[[issues]]
+make = "toyota"
+model = "corolla"
+year_min = 2000
+year_max = 2008
+title = "Rust in rear wheel arches and subframe"
+description = "Corollas from this era are frequently reported to develop rust around the rear wheel arches and subframe mounting points in Nordic climates, mainly due to road salt exposure."
+source = "forum"
+
+[[issues]]
+make = "toyota"
+model = "avensis"
+year_min = 1997
+year_max = 2008
+title = "Ignition coil failures"
+description = "Petrol Avensis models from the T22/T25 generations are commonly reported to suffer ignition coil failures, causing misfires and rough idle; a moderately common repair on higher-mileage cars."
+source = "forum"
+
+[[issues]]
+make = "toyota"
+model = "avensis"
+year_min = 2003
+year_max = 2008
+title = "Multi-information display failure"
+description = "The dashboard multi-function display (trip computer/clock) is a well-known weak point on T25 Avensis models and frequently stops working or shows garbled segments."
+source = "general-knowledge"
+
+[[issues]]
+make = "kia"
+model = "ceed"
+year_min = 2006
+year_max = 2012
+title = "Dual-mass flywheel wear"
+description = "Manual first-generation Ceeds are commonly reported to wear out their dual-mass flywheel prematurely, presenting as rattling at idle and vibration through the clutch pedal."
+source = "forum"
+
+[[issues]]
+make = "kia"
+model = "ceed"
+year_min = 2012
+year_max = 2018
+title = "Timing chain tensioner rattle (petrol GDI engines)"
+description = "Some second-generation Ceed petrol GDI engines are reported to develop a rattling timing chain at cold start due to tensioner wear; not universal, but frequently mentioned in owner forums."
+source = "general-knowledge"
+
+[[issues]]
+make = "volkswagen"
+model = "passat"
+year_min = 2005
+year_max = 2015
+title = "Timing chain tensioner failure (1.8/2.0 TSI)"
+description = "Early EA888/EA111 TSI engines used in this generation are widely reported to suffer timing chain tensioner failures, which can lead to chain skip and serious engine damage if not caught early. One of the most cited issues for this generation."
+source = "forum"
+
+[[issues]]
+make = "volkswagen"
+model = "passat"
+year_min = 2005
+year_max = 2015
+title = "DSG mechatronic unit faults"
+description = "Passats fitted with the DSG dual-clutch automatic are commonly reported to develop mechatronic unit faults, causing jerky shifting or the transmission entering limp mode."
+source = "general-knowledge"
+
+[[issues]]
+make = "skoda"
+model = "octavia"
+year_min = 2004
+year_max = 2013
+title = "Timing chain tensioner failure (shared VAG TSI engines)"
+description = "Mk2 Octavias share the same EA888/EA111 TSI engines as contemporary VW/Audi models and carry the same widely-reported timing chain tensioner risk."
+source = "forum"
+
+[[issues]]
+make = "skoda"
+model = "octavia"
+year_min = 2004
+year_max = 2013
+title = "DSG mechatronic unit faults"
+description = "As with other VAG models of this era, DSG-equipped Octavias are commonly reported to develop mechatronic unit issues over time."
+source = "general-knowledge"
+
+[[issues]]
+make = "toyota"
+model = "yaris"
+year_min = 1999
+year_max = 2011
+title = "Generally reliable — few systemic issues reported"
+description = "First and second generation Yaris models have a strong reliability reputation; reported issues tend to be isolated (e.g. power steering pump wear) rather than systemic. Treat any single-car issue on its own merits."
+source = "general-knowledge"
+
+[[issues]]
+make = "toyota"
+model = "auris"
+year_min = 2013
+year_max = 2018
+title = "CVT judder on hybrid variants"
+description = "Some owners of hybrid Auris models report a shudder or judder from the CVT/e-CVT transmission at low speed, particularly noticeable when cold; not consistently reproducible across all cars."
+source = "user"

@@ -196,6 +196,32 @@ def generate_html(conn, output_path="report.html"):
         if row and row["lat"]:
             origin_lat, origin_lon = row["lat"], row["lon"]
 
+    # Known model issues — reference data for the "ⓘ" button per listing
+    known_issues_by_key = {}
+    known_issues_file = Path(__file__).parent / "known_issues.toml"
+    if known_issues_file.exists():
+        with open(known_issues_file, "rb") as f:
+            known_issues_data = tomllib.load(f)
+        for entry in known_issues_data.get("issues", []):
+            key = f"{entry['make'].lower()}|{entry['model'].lower()}"
+            known_issues_by_key.setdefault(key, []).append({
+                "yearMin": entry.get("year_min"),
+                "yearMax": entry.get("year_max"),
+                "title": entry["title"],
+                "description": entry["description"],
+                "source": entry.get("source", "user"),
+            })
+
+    def _issue_matches_year(entry, year):
+        if year is None:
+            return True
+        y_min, y_max = entry.get("yearMin"), entry.get("yearMax")
+        if y_min is not None and year < y_min:
+            return False
+        if y_max is not None and year > y_max:
+            return False
+        return True
+
     city_coords_map = {}
     if filtered:
         locations = list({r["location"] for r in filtered if r["location"]})
@@ -358,10 +384,16 @@ def generate_html(conn, output_path="report.html"):
                     if r["year"] and r["mileage"] and r["year"] < current_year else None
         km_yr = f"{km_yr_raw:,}" if km_yr_raw else "–"
         pareto_badge = ' <span class="badge-pareto">★</span>' if is_pareto else ""
+        issue_key = f"{(r['make'] or '').lower()}|{(r['model'] or '').lower()}"
+        matching_issues = [e for e in known_issues_by_key.get(issue_key, []) if _issue_matches_year(e, r["year"])]
+        info_btn = (
+            f''' <button class="info-btn" onclick="showIssues('{issue_key}', {r['year'] if r['year'] else 'null'})" title="{len(matching_issues)} known issue(s) reported for this model/year">ⓘ</button>'''
+            if matching_issues else ""
+        )
         table_rows += f"""
         <tr class="{row_class}" data-pareto="{'1' if is_pareto else '0'}" data-dist="{dist_km}" data-mileage="{r['mileage'] or ''}" data-year="{r['year'] or ''}" data-price="{r['price'] or ''}" data-kmyr="{km_yr_raw or ''}" data-dom="{days if days is not None else ''}" data-label="{r['search_label']}" data-transmission="{trans_norm}" data-deal="{deal_val}" data-firstseen="{r['date_first_seen'] or ''}">
             <td>{r['year'] or '–'}</td>
-            <td>{(r['make'] or '').title()} {(r['model'] or '').title()}{pareto_badge}</td>
+            <td>{(r['make'] or '').title()} {(r['model'] or '').title()}{pareto_badge}{info_btn}</td>
             <td class="num">{f"{r['price']:,}" if r['price'] else '–'} €{price_badge}</td>
             <td class="num">{f"{r['mileage']:,}" if r['mileage'] else '–'} km</td>
             <td class="num">{km_yr}</td>
@@ -436,6 +468,24 @@ def generate_html(conn, output_path="report.html"):
   .filter-bar select {{ font-size: 0.875rem; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0.3rem 0.5rem; background: white; cursor: pointer; }}
   .btn-toggle-sm {{ margin-left: 0 !important; padding: 0.2rem 0.6rem; font-size: 0.75rem; }}
   .model-bar-sm {{ display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem; }}
+  .info-btn {{ border: none; background: none; color: #64748b; cursor: pointer; font-size: 0.95rem; vertical-align: middle; padding: 0 0.2rem; line-height: 1; }}
+  .info-btn:hover {{ color: #1d4ed8; }}
+  .modal-overlay {{ display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }}
+  .modal-overlay.open {{ display: flex; }}
+  .modal-box {{ background: white; border-radius: 10px; max-width: 560px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 1.25rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,.2); }}
+  .modal-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }}
+  .modal-header h3 {{ font-size: 1.05rem; color: #1e293b; }}
+  .modal-close {{ border: none; background: none; font-size: 1rem; cursor: pointer; color: #64748b; }}
+  .modal-close:hover {{ color: #1e293b; }}
+  .issue-item {{ padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9; }}
+  .issue-item:last-child {{ border-bottom: none; }}
+  .issue-title {{ font-weight: 600; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.25rem; }}
+  .issue-desc {{ font-size: 0.825rem; color: #475569; line-height: 1.4; }}
+  .issue-source {{ display: inline-block; margin-top: 0.4rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; padding: 0.15rem 0.5rem; border-radius: 999px; }}
+  .source-recall {{ background: #fee2e2; color: #b91c1c; }}
+  .source-forum {{ background: #dbeafe; color: #1d4ed8; }}
+  .source-user {{ background: #f1f5f9; color: #475569; }}
+  .source-general-knowledge {{ background: #f1f5f9; color: #475569; }}
 </style>
 </head>
 <body>
@@ -487,6 +537,16 @@ def generate_html(conn, output_path="report.html"):
 <div class="charts">
   <div class="chart-box wide">
     <canvas id="scatter"></canvas>
+  </div>
+</div>
+
+<div class="modal-overlay" id="issuesModal" onclick="if(event.target===this) closeIssuesModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="issuesModalTitle"></h3>
+      <button class="modal-close" onclick="closeIssuesModal()">✕</button>
+    </div>
+    <div id="issuesModalBody"></div>
   </div>
 </div>
 
@@ -631,6 +691,37 @@ mileageSlider.addEventListener('input', () => {{ mileageVal.textContent = parseI
 const yearSlider = document.getElementById('yearSlider');
 const yearVal = document.getElementById('yearVal');
 yearSlider.addEventListener('input', () => {{ yearVal.textContent = yearSlider.value; applyFilters(); }});
+
+const knownIssuesData = {json.dumps(known_issues_by_key)};
+const sourceLabels = {{
+    recall: 'Recall / TSB',
+    forum: 'Owner forums',
+    user: 'User-reported',
+    'general-knowledge': 'General knowledge — unverified',
+}};
+function showIssues(key, year) {{
+    const entries = (knownIssuesData[key] || []).filter(e => {{
+        const yMin = e.yearMin ?? -Infinity, yMax = e.yearMax ?? Infinity;
+        return year === null || (year >= yMin && year <= yMax);
+    }});
+    const [make, model] = key.split('|');
+    const titleCase = s => s.charAt(0).toUpperCase() + s.slice(1);
+    document.getElementById('issuesModalTitle').textContent =
+        `${{titleCase(make)}} ${{titleCase(model)}}${{year ? ' (' + year + ')' : ''}} — known issues`;
+    document.getElementById('issuesModalBody').innerHTML = entries.length
+        ? entries.map(e => `
+            <div class="issue-item">
+                <div class="issue-title">${{e.title}}</div>
+                <div class="issue-desc">${{e.description}}</div>
+                <span class="issue-source source-${{e.source}}">${{sourceLabels[e.source] || e.source}}</span>
+            </div>`).join('')
+        : '<p style="font-size:0.85rem;color:#64748b">No reports specific to this year — see the model\\'s general entries.</p>';
+    document.getElementById('issuesModal').classList.add('open');
+}}
+function closeIssuesModal() {{
+    document.getElementById('issuesModal').classList.remove('open');
+}}
+document.addEventListener('keydown', e => {{ if (e.key === 'Escape') closeIssuesModal(); }});
 </script>
 </body>
 </html>"""
